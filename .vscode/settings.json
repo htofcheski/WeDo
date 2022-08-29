@@ -1,0 +1,24 @@
+{
+  "editor.formatOnSave": true,
+  "go.buildOnSave": "package",
+  "go.lintOnSave": "off",
+  "lit-plugin.rules.no-unknown-tag-name": "off",
+  "lit-plugin.rules.no-unknown-attribute": "off",
+  "lit-plugin.rules.no-unknown-property": "off",
+  "lit-plugin.rules.no-complex-attribute-binding": "off",
+  "prettier.prettierPath": "client/node_modules/prettier",
+  // https://github.com/golang/go/issues/33030
+  // https://github.com/golang/tools/blob/master/gopls/doc/settings.md
+  "gopls": {
+    "usePlaceholders": false,
+    "completeUnimported": true,
+    "staticcheck": false,
+    // https://cs.opensource.google/go/tools/+/master:gopls/doc/analyzers.md
+    "analyses": {
+      "simplifycompositelit": false,
+      "simplifyrange": false,
+      // protobuf messages embed mutexes, this produces a lot of warnings about non pointer protobuf message usage
+      "copylocks": false
+    }
+  }
+}

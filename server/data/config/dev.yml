@@ -1,0 +1,8 @@
+database:
+  host: '127.0.0.1'
+  database: we_do
+  username: we_do
+  password: 1234
+  max_open_connections: 10
+  max_idle_connections: 2
+  max_lifetime_connection: '10m'
