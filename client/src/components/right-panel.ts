@@ -7,37 +7,22 @@ import '@polymer/iron-image';
 
 import moment = require('moment');
 
-export interface team_user {
+export interface CHK_TEAM_USER {
   uuid?: string;
   name?: string;
   picture?: string;
   email?: string;
 }
 
-@customElement('right-pannel')
-export class RightPannel extends LitElement {
-  @property({ type: String, attribute: false })
-  icon = '';
-
-  @property({ type: String, attribute: false })
-  title = '';
-
-  @property({ type: Boolean, attribute: false })
-  back_button = false;
-
-  @property({ type: Boolean, attribute: false })
-  primary_back_button = false;
-
-  @property({ type: Boolean, attribute: false })
-  action_buttons = false;
-
+@customElement('right-panel')
+export class RightPanel extends LitElement {
   @property({ attribute: false })
-  team: team_user[] = [
+  team: CHK_TEAM_USER[] = [
     {
-      uuid: '1',
-      name: 'NTurtle',
-      picture: 'https://i.pinimg.com/736x/93/45/89/934589f3aa2f266b260de8bfeb3ae1ab.jpg',
-      email: 'test@test.com',
+      uuid: '82',
+      name: 'Peyton Prescott',
+      picture: 'https://randomuser.me/api/portraits/women/82.jpg',
+      email: 'peyton.prescott@example.com',
     },
     {
       uuid: '2',
@@ -65,20 +50,10 @@ export class RightPannel extends LitElement {
       name: 'Johnefer',
       email: 'test3@test3.com',
     },
-    {
-      uuid: '7',
-      name: 'Tortelini',
-      email: 'test3@test3.com',
-    },
-    {
-      uuid: '8',
-      name: 'Testolini',
-      email: 'test3@test3.com',
-    },
   ];
 
   @property({ attribute: false })
-  calendar_moment = moment();
+  projects_calendar_moment: moment.Moment = moment();
 
   @property({ attribute: false })
   tasks: any[] = [
@@ -87,7 +62,7 @@ export class RightPannel extends LitElement {
       name: 'Ova e primer task sto e epten dolg u slucaj da otide na nova linija. Ajde uste malu da otide pak u nova linija',
       updated: '1666887627',
     },
-    { uuid: '321998', name: 'Peri dishes', updated: '1666887627' },
+    { uuid: '321998', name: 'test21123', updated: '1666887627' },
     { uuid: '654997', name: 'test 3', updated: '1666887627' },
     { uuid: '987996', name: 'test 4', updated: '1666887627' },
     { uuid: '789995', name: 'test 5', updated: '1666887627' },
@@ -111,23 +86,51 @@ export class RightPannel extends LitElement {
       padding: 0;
       overflow: hidden;
       background: white;
+      border-left: 0.1rem solid #f2f3f5;
     }
     .main-container {
+      margin: 0 1.5rem;
       width: 100%;
     }
-    .icons {
+    .push-down {
+      margin-top: 1rem;
+    }
+    .push-down-half {
+      margin-top: 0.5rem;
+    }
+    .section-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #333;
+    }
+    .section-sub-title {
+      font-size: 1.1rem;
+      color: #555;
+    }
+    .span-to-button {
+      color: var(--theme-primary);
+      align-self: center;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .span-to-button[disabled] {
+      color: #777 !important;
+      cursor: not-allowed;
+    }
+    .week-year[current],
+    .week-day[current] {
+      color: var(--theme-primary) !important;
+    }
+    .calendar-item {
+      min-width: 1.5rem;
+      width: 1.5rem;
+      max-width: 1.5rem;
+    }
+    .user-icons {
       justify-content: center;
       margin: 0.7rem 0;
     }
-    hr {
-      display: block;
-      height: 1px;
-      border: 0;
-      border-top: 2px solid #f2f3f5;
-      margin: 0.7rem 1rem;
-      padding: 0;
-    }
-    .buttonss {
+    .dir-buttons {
       background-color: rgba(51, 51, 51, 0.05);
       border-radius: 50%;
       border-width: 0;
@@ -140,7 +143,10 @@ export class RightPannel extends LitElement {
       padding: 0.35rem 0.7rem;
       text-align: center;
     }
-    .buttonss2 {
+    .dir-buttons:hover {
+      color: var(--theme-primary) !important;
+    }
+    .recent-task {
       background-color: rgba(51, 51, 51, 0.05);
       border-radius: 5%;
       box-sizing: unset;
@@ -151,173 +157,98 @@ export class RightPannel extends LitElement {
       font-weight: 500;
       line-height: 20px;
       list-style: none;
-      margin: 0;
+      margin: 1rem 1rem 0 0;
       padding: 0.35rem 0.7rem;
       text-align: center;
     }
-    .buttonss2:hover {
+    .recent-task:hover {
       background-color: lightgray;
-    }
-
-    .scroll-demo::-webkit-scrollbar {
-      width: 10px;
-    }
-
-    .scroll-demo::-webkit-scrollbar-track {
-      box-shadow: inset 0 0 10px whitesmoke;
-      border-radius: 50px;
-    }
-    .scroll-demo::-webkit-scrollbar-thumb {
-      background: silver;
-      border-radius: 50px;
-    }
-    .scroll-demo::-webkit-scrollbar-thumb:hover {
-      background: #7771eb;
     }
   `);
 
   render() {
     return html`
       <div class="layout vertical main-container">
-        <div class="layout vertical" style="margin: 0 1.5rem;">
-          <div class="layout horizontal justified" style="margin-top: 1rem;">
-            <span
-              ><b style="font-size: 1.1rem; color: #333;"
-                >Team <span style="color: #7771eb;">(${this.team.length})</span></b
-              ></span
-            >
-            <span class="flex"></span
+        <div class="layout vertical">
+          <div class="layout horizontal justified push-down">
+            <span class="section-title"
+              >Team <span style="color: var(--theme-primary);">(${this.team.length})</span></span
+            ><span class="flex"></span
             ><span
-              style="color: #7771eb; font-size: 0.75rem; align-self: center;"
+              class="span-to-button unselectable"
+              style="font-size: 0.75rem;"
               @click=${() => {
+                //@todo CHK
                 console.log('opening');
               }}
-              ><b>View all</b></span
+              >View all</span
             >
           </div>
-          <div class="layout horizontal icons">
+          <div class="layout horizontal user-icons">
             ${this.team
-              .sort(this.compare)
-              .slice(0, 6)
-              .map((team_member) => {
-                return this.renderUser(team_member, true);
+              .sort(this.sortUsers)
+              .slice(0, 5)
+              .map((user) => {
+                return this.renderUser(user, true);
               })}
           </div>
         </div>
-        <hr />
-        <div class="layout vertical" style="margin: 1rem 1.5rem;">
+        <hr class="hr-style" />
+        <div class="layout vertical">
           <div class="layout horizontal justified">
-            <span style="color: #555;font-size: 1.1rem;">Calendar</span>
-          </div>
-          <div class="layout horizontal justified" style="font-size: 1.2rem; color: #333;">
-            <b>${this.calendar_moment.format('MMMM, YYYY')}</b><span class="flex"></span>
-            <button
-              class="buttonss"
+            <span class="section-title">Calendar</span><span class="flex"></span>
+            <span
+              ?disabled=${this.projects_calendar_moment.isSame(moment(), 'week')}
+              class="span-to-button unselectable"
+              style="font-size: 0.75rem;"
               @click=${() => {
-                this.calendar_moment = this.calendar_moment.startOf('week').subtract(7, 'days');
+                this.projects_calendar_moment = moment();
+                this.requestUpdate();
+              }}
+              >This week</span
+            >
+          </div>
+          <div class="layout horizontal justified section-sub-title push-down-half">
+            <span
+              class="week-year"
+              ?current=${this.projects_calendar_moment.isSame(moment(), 'week') &&
+              this.projects_calendar_moment.isSame(moment(), 'year')}
+              >Week ${this.projects_calendar_moment.week()}, ${this.projects_calendar_moment.format('YYYY')}</span
+            ><span class="flex"></span>
+            <button
+              class="dir-buttons unselectable"
+              @click=${() => {
+                this.projects_calendar_moment = this.projects_calendar_moment.startOf('week').subtract(7, 'days');
                 this.requestUpdate();
               }}
             >
-              <</button
-            ><button
-              class="buttonss"
+              <
+            </button>
+            <button
+              class="dir-buttons unselectable"
               style="margin-left: 0.7rem;"
               @click=${() => {
-                this.calendar_moment = this.calendar_moment.startOf('week').add(7, 'days');
+                this.projects_calendar_moment = this.projects_calendar_moment.startOf('week').add(7, 'days');
                 this.requestUpdate();
               }}
             >
               >
             </button>
           </div>
-
-          <div class="layout horizontal justified" style="margin-top: 1rem;">${this.renderDates()}</div>
+          <div class="layout horizontal justified push-down">${this.renderDates()}</div>
         </div>
-        <hr />
-        <div
-          class="layout vertical scroll-demo"
-          style="margin: 0 1.5rem; margin-top: 1rem; overflow-y: scroll; height: 100%;"
-        >
-          <div class="layout horizontal justified">
-            <span style="color: #333;font-size: 1.2rem;"><b>Recent Task Updates</b></span>
-          </div>
-
+        <hr class="hr-style" />
+        <div class="layout horizontal justified">
+          <span class="section-title">Recent Task Updates</span>
+        </div>
+        <div class="layout vertical scroll-style push-down" style="overflow-y: scroll; height: 100%;">
           <div class="layout vertical justified">${this.renderRecentTasks()}</div>
         </div>
       </div>
     `;
   }
 
-  renderRecentTasks(): TemplateResult {
-    let temp_arr: TemplateResult[] = [];
-
-    this.tasks.forEach((task) => {
-      temp_arr.push(
-        html`
-          <div class="layout horizontal justified">
-            <button class="buttonss2" style="margin: 1rem 1rem 0 0">
-              <div class="layout horizontal">
-                <div
-                  class="layout vertical justified"
-                  style="background: ${this.color(task.uuid)}; width: 4%; height: 0.5rem; border-radius: 50%;"
-                ></div>
-                <div
-                  class="layout vertical justified"
-                  style="background: green; width: 4%; height: 0.5rem; border-radius: 50%;"
-                ></div>
-              </div>
-
-              <div class="layout horizontal justified">${task.name}</div>
-            </button>
-          </div>
-        `
-      );
-    });
-
-    return html`${temp_arr.map((test) => {
-      return test;
-    })}`;
-  }
-
-  renderDates(): TemplateResult {
-    let temp_arr: TemplateResult[] = [];
-
-    for (let i = 0; i < 7; i++) {
-      temp_arr.push(
-        html`<div class="layout vertical justified">
-          <div class="layout horizontal justified" style="margin-bottom: 1rem; color: #555; min-width: 1.5rem;">
-            ${this.calendar_moment.startOf('week').add(i, 'days').format('ddd')}
-          </div>
-          <div class="layout horizontal justified" styles="min-width: 1.5rem;">
-            ${this.calendar_moment.startOf('week').add(i, 'days').format('D')}
-          </div>
-        </div>`
-      );
-    }
-    // let test = moment().startOf('week').add(7, 'days');
-
-    return html`${temp_arr.map((test) => {
-      return test;
-    })}`;
-  }
-
-  compare(a: team_user, b: team_user): number {
-    let a_comp = a.name || a.email;
-    let b_comp = b.name || b.email;
-    if (!a_comp || !b_comp) {
-      return 0;
-    }
-
-    if (a_comp < b_comp) {
-      return -1;
-    }
-    if (a_comp > b_comp) {
-      return 1;
-    }
-    return 0;
-  }
-
-  renderUser(user: team_user, icon_only: boolean): TemplateResult {
+  renderUser(user: CHK_TEAM_USER, icon_only: boolean): TemplateResult {
     if (!user) {
       return html``;
     }
@@ -369,10 +300,92 @@ export class RightPannel extends LitElement {
     `;
   }
 
+  sortUsers(a: CHK_TEAM_USER, b: CHK_TEAM_USER): number {
+    let a_comp = a.name || a.email;
+    let b_comp = b.name || b.email;
+    if (!a_comp || !b_comp) {
+      return 0;
+    }
+
+    if (a_comp < b_comp) {
+      return -1;
+    }
+    if (a_comp > b_comp) {
+      return 1;
+    }
+    return 0;
+  }
+
   color(seed: number | string): string {
     return randomColor({
       seed: seed,
       luminosity: 'dark',
     });
+  }
+
+  renderDates(): TemplateResult {
+    //@todo CHK
+    let day_column_arr: TemplateResult[] = [];
+    let projects_calendar_moment_cloned = this.projects_calendar_moment.clone();
+
+    for (let i = 0; i < 7; i++) {
+      projects_calendar_moment_cloned = projects_calendar_moment_cloned.startOf('week').add(i, 'days');
+
+      day_column_arr.push(
+        html`<div class="layout vertical justified">
+          <div
+            ?current=${projects_calendar_moment_cloned.isSame(moment(), 'date')}
+            class="layout horizontal center-center week-day calendar-item"
+            style="color: #555;"
+          >
+            ${projects_calendar_moment_cloned.format('ddd')}
+          </div>
+          <div class="layout horizontal center-center calendar-item push-down">
+            ${projects_calendar_moment_cloned.format('D')}
+          </div>
+          <div class="layout horizontal center-center calendar-item" style="margin-top: -0.2rem;">
+            ${projects_calendar_moment_cloned.format('MMM')}
+          </div>
+        </div>`
+      );
+    }
+
+    return html`${day_column_arr.map((day_column) => {
+      return day_column;
+    })}`;
+  }
+
+  renderRecentTasks(): TemplateResult {
+    let recent_task_arr: TemplateResult[] = [];
+
+    //@todo CHK
+
+    this.tasks.forEach((task) => {
+      recent_task_arr.push(
+        html`
+          <div class="layout horizontal justified">
+            <button class="recent-task">
+              <div class="layout horizontal">
+                <div
+                  class="layout vertical justified"
+                  style="background: ${this.color(task.uuid)}; width: 4%; height: 0.5rem; border-radius: 50%;"
+                ></div>
+                <div
+                  class="layout vertical justified"
+                  style="background: green; width: 4%; height: 0.5rem; border-radius: 50%;"
+                ></div>
+                <div class="flex"></div>
+                <div>${moment.utc(task.updated * 1000).format('DD.MM.YYYY HH:mm:ss')}</div>
+              </div>
+              <div class="layout horizontal justified">${task.name}</div>
+            </button>
+          </div>
+        `
+      );
+    });
+
+    return html`${recent_task_arr.map((recent_task) => {
+      return recent_task;
+    })}`;
   }
 }

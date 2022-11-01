@@ -335,6 +335,41 @@ export const flexbox_styles = css`
   }
 `;
 
-export const shared = css``;
+export const shared = css`
+  :host {
+    --theme-primary: #7771eb;
+  }
+
+  .scroll-style::-webkit-scrollbar {
+    width: 10px;
+  }
+  .scroll-style::-webkit-scrollbar-track {
+    box-shadow: inset 0 0 10px whitesmoke;
+    border-radius: 50px;
+  }
+  .scroll-style::-webkit-scrollbar-thumb {
+    background: silver;
+    border-radius: 50px;
+  }
+  .scroll-style::-webkit-scrollbar-thumb:hover {
+    background: var(--theme-primary);
+  }
+
+  .unselectable {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+
+  .hr-style {
+    display: block;
+    height: 1px;
+    border: 0;
+    border-top: 0.1rem solid #f2f3f5;
+    margin: 1.2rem 0;
+    padding: 0;
+  }
+`;
 
 export const all = [flexbox_styles, shared];

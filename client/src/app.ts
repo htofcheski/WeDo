@@ -11,6 +11,6 @@ export class WeDo extends LitElement {
   name = 'Hristijan Tofcheski';
 
   render() {
-    return html`<right-pannel></right-pannel>`;
+    return html`<right-panel></right-panel>`;
   }
 }
