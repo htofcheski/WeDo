@@ -76,9 +76,6 @@ export class RightPanel extends LitElement {
   static styles = all.concat(css`
     :host {
       display: flex;
-      width: 20%;
-      max-width: 20%;
-      min-width: 20%;
       height: 100%;
       min-height: 100%;
       max-height: 100%;
@@ -120,6 +117,7 @@ export class RightPanel extends LitElement {
     .week-year[current],
     .week-day[current] {
       color: var(--theme-primary) !important;
+      font-weight: 500;
     }
     .calendar-item {
       min-width: 1.5rem;
@@ -157,7 +155,7 @@ export class RightPanel extends LitElement {
       font-weight: 500;
       line-height: 20px;
       list-style: none;
-      margin: 1rem 1rem 0 0;
+      margin: 0.3rem 1rem 0.7rem 0;
       padding: 0.35rem 0.7rem;
       text-align: center;
     }
@@ -368,11 +366,13 @@ export class RightPanel extends LitElement {
               <div class="layout horizontal">
                 <div
                   class="layout vertical justified"
-                  style="background: ${this.color(task.uuid)}; width: 4%; height: 0.5rem; border-radius: 50%;"
+                  style="background: ${this.color(
+                    task.uuid
+                  )}; width: 0.7rem; height: 0.7rem; border-radius: 50%; align-self: center;"
                 ></div>
                 <div
                   class="layout vertical justified"
-                  style="background: green; width: 4%; height: 0.5rem; border-radius: 50%;"
+                  style="background: green; width: 0.7rem; height: 0.7rem; border-radius: 50%; align-self: center;"
                 ></div>
                 <div class="flex"></div>
                 <div>${moment.utc(task.updated * 1000).format('DD.MM.YYYY HH:mm:ss')}</div>
