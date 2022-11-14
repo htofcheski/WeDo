@@ -3,7 +3,10 @@ import { LitElement, html, customElement, property, css, TemplateResult } from '
 import { all } from '../styles/styles';
 import randomColor = require('randomcolor');
 
-import '@polymer/iron-image';
+import '@polymer/iron-image/iron-image';
+import '@polymer/iron-icon/iron-icon';
+import '@polymer/iron-icons/iron-icons';
+import '@polymer/iron-icons/maps-icons';
 
 import moment = require('moment');
 
@@ -24,34 +27,37 @@ export class LeftPanel extends LitElement {
   static styles = all.concat(css`
     :host {
       display: flex;
-      width: 5%;
-      max-width: 5%;
-      min-width: 5%;
+      width: 8%;
+      max-width: 8%;
+      min-width: 8%;
       height: 100%;
       min-height: 100%;
       max-height: 100%;
       margin: 0;
       padding: 0;
       overflow: hidden;
-      background: white;
-      outline: 0.1rem #f2f3f5 solid;
+      background: #f2f3f5;
     }
     .main-container {
-      margin: 0 1.5rem;
       width: 100%;
+      max-width: 100%;
+      min-width: 100%;
     }
-    .page-name {
-      font-size: 1.3rem;
-      font-weight: 600;
-      color: #333;
+    .outside-icons {
     }
   `);
 
   render() {
-    return html`<div class="layout horizontal main-container">
-      <div class="layout horizontal center-center page-name">${this.page_name}</div>
+    return html`<div class="layout vertical main-container">
+      <div class="flex" style="flex: 0.04"></div>
+      <div class="layout vertical center-center outside-icons">
+        <iron-icon src="/assets/src/img/logo.png" style="width: 3rem; height: 3rem;"></iron-icon>
+      </div>
       <div class="flex"></div>
-      <div class="layout horizontal center-center">${this.renderUser(this.user, false)}</div>
+      <div class="layout vertical center-center outside-icons">
+        <iron-icon icon="maps:directions-walk" style="width: 1.5rem;"></iron-icon>
+      </div>
+      <div class="flex" style="flex: 0.04"></div>
     </div>`;
   }
 

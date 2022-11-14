@@ -34,14 +34,15 @@ export class TopHeader extends LitElement {
       padding: 0;
       overflow: hidden;
       background: white;
-      outline: 0.1rem #f2f3f5 solid;
+      outline: 0.2rem solid #f2f3f5;
+      z-index: 999;
     }
     .main-container {
-      margin: 0 1.5rem;
+      margin: 0 2.2rem;
       width: 100%;
     }
     .page-name {
-      font-size: 1.3rem;
+      font-size: 1.2rem;
       font-weight: 600;
       color: #333;
     }

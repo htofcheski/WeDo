@@ -79,11 +79,15 @@ export class RightPanel extends LitElement {
       height: 100%;
       min-height: 100%;
       max-height: 100%;
+      width: 100%;
+      min-width: 100%;
+      max-width: 100%;
       margin: 0;
       padding: 0;
       overflow: hidden;
       background: white;
-      border-left: 0.1rem solid #f2f3f5;
+      outline: 0.2rem solid #f2f3f5;
+      z-index: 999;
     }
     .main-container {
       margin: 0 1.5rem;
