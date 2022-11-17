@@ -29,6 +29,8 @@
     "@polymer/iron-image": "^3.0.2",
     "@polymer/iron-pages": "^3.0.1",
     "@polymer/paper-progress": "^3.0.1",
+    "@polymer/paper-tabs": "^3.1.0",
+    "@polymer/paper-icon-button": "^3.0.2",
     "lit-element": "^2.5.1",
     "lit-html": "^1.4.1",
     "moment": "^2.29.1",

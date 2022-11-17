@@ -4,6 +4,7 @@ import { all } from '../styles/styles';
 import randomColor = require('randomcolor');
 
 import '@polymer/iron-image';
+import '@polymer/paper-icon-button/paper-icon-button';
 
 import moment = require('moment');
 
@@ -50,7 +51,13 @@ export class TopHeader extends LitElement {
 
   render() {
     return html`<div class="layout horizontal main-container">
-      <div class="layout horizontal center-center page-name">${this.page_name}</div>
+      <div class="layout horizontal center-center page-name">
+        ${this.page_name}<paper-icon-button
+          ?hidden=${this.page_name != 'My Projects'}
+          icon="add-circle"
+          style="color: var(--theme-primary);"
+        ></paper-icon-button>
+      </div>
       <div class="flex"></div>
       <div class="layout horizontal center-center">${this.renderUser(this.user, false)}</div>
     </div>`;

@@ -8,6 +8,8 @@ import '@polymer/iron-icon/iron-icon';
 import '@polymer/iron-icons/iron-icons';
 import '@polymer/iron-icons/hardware-icons';
 import '@polymer/paper-progress/paper-progress';
+import '@polymer/paper-tabs/paper-tab';
+import '@polymer/paper-tabs/paper-tabs';
 
 import moment = require('moment');
 
@@ -21,7 +23,26 @@ export interface CHK_TEAM_USER {
 @customElement('task-list')
 export class LeftPanel extends LitElement {
   @property({ attribute: false })
-  page_name: string = 'My Projects';
+  page_name: string = 'My Tasks';
+
+  @property({ attribute: false })
+  tasks: any[] = [
+    {
+      uuid: '000999',
+      name: 'Ova e primer task sto e epten dolg u slucaj da otide na nova linija. Ajde uste malu da otide pak u nova linija',
+      updated: '1666887627',
+      status: 1,
+    },
+    { uuid: '321998', name: 'test21123', updated: '1666887627', status: 0 },
+    { uuid: '654997', name: 'test 3', updated: '1666887627', status: 1 },
+    { uuid: '987996', name: 'test 4', updated: '1666887627', status: 2 },
+    { uuid: '789995', name: 'test 5', updated: '1666887627', status: 1 },
+    { uuid: '456994', name: 'test 6', updated: '1666887627', status: 0 },
+    { uuid: '123993', name: 'test 73', updated: '1666887627', status: 0 },
+    { uuid: '111111', name: 'test 711', updated: '1666887627', status: 2 },
+    { uuid: '333333', name: 'test 72', updated: '1666887627', status: 1 },
+    { uuid: '555555', name: 'test 32', updated: '1666887627', status: 0 },
+  ];
 
   static styles = all.concat(css`
     :host {
@@ -43,7 +64,6 @@ export class LeftPanel extends LitElement {
       margin: 0 2rem;
     }
     .project-summary {
-      margin-top: 2rem;
       height: 8rem;
       max-height: 8rem;
       min-height: 8rem;
@@ -56,6 +76,12 @@ export class LeftPanel extends LitElement {
     }
     .project-summary > div {
       align-self: center;
+    }
+    .container {
+      margin-top: 2rem;
+    }
+    .container[first] {
+      margin-top: 0.5rem;
     }
     .expand-project {
       margin-right: 1rem;
@@ -79,20 +105,66 @@ export class LeftPanel extends LitElement {
       color: #333;
     }
     .expanded-part {
-      height: 10rem;
+      min-height: 10rem;
       background: white;
       margin-top: 1rem;
       box-shadow: rgba(149, 157, 165, 0.2) 0px 8px 24px;
+      border-radius: 0.8rem;
+      overflow-y: scroll;
+    }
+    .header {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: rgb(51, 51, 51);
+      margin: 0 0.2rem;
+      margin-top: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .paper-tabs {
+      --paper-tabs-selection-bar-color: var(--theme-primary);
+    }
+    .task-item {
+      margin: 1.5rem 0 1.5rem 2rem;
+      font-size: 1.1rem;
+      font-weight: 500;
+    }
+    .kocka-status {
+      margin-right: 1rem;
+      width: 1rem;
+      height: 1rem;
+      align-self: center;
+      border-radius: 0.2rem;
+    }
+    .kocka-status[open] {
+      background: gray;
+    }
+    .kocka-status[active] {
+      background: blue;
+    }
+    .kocka-status[done] {
+      background: green;
     }
   `);
 
   render() {
     return html`<div class="layout vertical main">
-      <div class="layout vertical">
+      <span class="header">My Tasks</span>
+      <div class="layout horizontal">
+        <div class="flex" style="margin-top: 0.6rem;">
+          <paper-tabs class="paper-tabs" selected="0">
+            <paper-tab>Open</paper-tab>
+            <paper-tab>Past</paper-tab>
+          </paper-tabs>
+        </div>
+        <div class="flex" style="flex: 3"></div>
+      </div>
+      <hr style="margin-top: 0;" class="hr-style" />
+
+      <div class="layout vertical container" ?first=${true}>
         <div class="layout horizontal justified project-summary">
           <div class="flex" style="flex: 0.08;"></div>
           <div
-            class="expand-project"
+            class="expand-project unselectable"
             @click=${() => {
               let elem = this.shadowRoot.getElementById('project-uuid');
               if (elem) {
@@ -125,7 +197,19 @@ export class LeftPanel extends LitElement {
           </div>
           <div class="flex" style="flex: 0.08;"></div>
         </div>
-        <div id="project-uuid" hidden class="layout horizontal justified expanded-part">This is the part for tasks</div>
+      </div>
+      <div id="project-uuid" hidden class="layout vertical justified expanded-part scroll-style">
+        ${this.tasks.map((task) => {
+          return html`<div class="layout horizontal task-item">
+            <div
+              class="kocka-status"
+              ?open=${task.status === 0}
+              ?active=${task.status === 1}
+              ?done=${task.status === 2}
+            ></div>
+            ${task.name}
+          </div>`;
+        })}
       </div>
     </div>`;
   }
