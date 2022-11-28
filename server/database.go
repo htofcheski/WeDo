@@ -10,6 +10,7 @@ import (
 
 	color "github.com/fatih/color"
 	_ "github.com/lib/pq"
+	"github.com/qustavo/dotsql"
 )
 
 const DriverName = "postgres"
@@ -134,6 +135,25 @@ func (db *Database) Initialize(options *DatabaseOptions) (err error) {
 	db.Version = Version(db.postgre)
 	db.SSL = SSL(db.postgre)
 	Log.Infof("Connected in %s - PostgreSQL v%s %s", FormatDurationInSecondsSince(connStarted), db.Version, db.SSL)
+
+	dot, err := dotsql.LoadFromFile("./data/postgre/create-tables.sql")
+	if err != nil {
+		return fmt.Errorf("DB query from file error: %s", err.Error())
+	}
+
+	for _, create_table_query := range []string{
+		"create-organization-table",
+		"create-org-user-table",
+		"create-team-table",
+		"create-team-user-table",
+		"create-task-table",
+		"create-project-table",
+	} {
+		_, err := dot.Exec(db.postgre, create_table_query)
+		if err != nil {
+			return fmt.Errorf("DB query from file error: %s, query: %s", err.Error(), create_table_query)
+		}
+	}
 
 	return nil
 }
