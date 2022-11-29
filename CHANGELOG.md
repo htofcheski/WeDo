@@ -1,3 +1,7 @@
+# вторник, 29 ноември 2022
+
+- session manager
+
 # понеделник, 28 ноември 2022
 
 - database tables structure

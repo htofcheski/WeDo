@@ -41,6 +41,7 @@ func initLogger() {
 
 func main() {
 	initLogger()
+	initSessionManager()
 	handleStartupError := func(err error) {
 		if err == nil {
 			return
