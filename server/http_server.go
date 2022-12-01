@@ -8,6 +8,7 @@ import (
 	"github.com/darahayes/go-boom"
 	"github.com/gorilla/mux"
 	_uuid "github.com/satori/go.uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func ServeStatic(router *mux.Router, staticDirectory string) {
@@ -118,20 +119,34 @@ func createOrganizationUser(w http.ResponseWriter, r *http.Request) {
 		boom.BadData(w, "[password] missing or too short")
 		return
 	}
-	// hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	// if err != nil {
-	// 	boom.Internal(w, err.Error())
-	// 	return
-	// }
-	// password_salted := string(hash)
-	// fmt.Println(password_salted)
+	password_salted, err := HashPassword(password)
+	if err != nil {
+		boom.Internal(w, err.Error())
+		return
+	}
 
-	// email := r_upgraded.QueryOrDefault("email", "")
-	// description := r_upgraded.QueryOrDefault("description", "")
-	// profile_picture := r_upgraded.QueryOrDefault("profile_picture", "")
+	email := r_upgraded.QueryOrDefault("email", "")
+	description := r_upgraded.QueryOrDefault("description", "")
+	profile_picture := r_upgraded.QueryOrDefault("profile_picture", "")
 
-	// uuid := _uuid.NewV4()
-	// now := time.Now().UTC()
+	uuid := _uuid.NewV4()
+	now := time.Now().UTC()
+
+	_, err = DB.Queries.Exec(DB.postgre, "create-organization-user", uuid, organization.Index, username, password_salted, email, description, profile_picture, now, now)
+	if err != nil {
+		boom.Internal(w, err.Error())
+		return
+	}
 
 	w.Write([]byte("OK!"))
+}
+
+func HashPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	return string(bytes), err
+}
+
+func CheckPasswordHash(password, hash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return err == nil
 }

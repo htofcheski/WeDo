@@ -12,6 +12,7 @@ require (
 	github.com/qustavo/dotsql v1.1.0
 	github.com/satori/go.uuid v1.2.0
 	go.uber.org/zap v1.23.0
+	golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/yaml.v2 v2.3.0
 )

@@ -5,4 +5,4 @@ INSERT INTO organization(uuid, name, created, updated) VALUES ($1, $2, $3, $4);
 SELECT index, uuid, name, created, updated, deleted_state FROM organization WHERE uuid = $1;
 
 -- name: create-organization-user
-INSERT INTO organization(uuid, name, created, updated) VALUES ($1, $2, $3, $4);
+INSERT INTO org_user(uuid, org_index, username, password, email, description, profile_picture, created, updated) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
