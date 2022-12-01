@@ -9,6 +9,9 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+// used for accessing apis with no ui.
+const API_KEY = "220896d3-0bd7-47ca-ad84-d8adb4f12e99"
+
 var (
 	DB     Database
 	Log    *zap.SugaredLogger

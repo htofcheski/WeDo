@@ -5,39 +5,29 @@ import (
 	"fmt"
 	"net"
 	"strings"
-	"sync"
 	"time"
 
 	color "github.com/fatih/color"
+	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/qustavo/dotsql"
 )
 
 const DriverName = "postgres"
 
-type Database struct {
-	sync.RWMutex
-
-	Debug   bool
-	Version string
-	SSL     string
-
-	postgre *sql.DB
-}
-
-func Version(db *sql.DB) string {
+func Version(db *sqlx.DB) string {
 	return Variable(db, "server_version")
 }
 
-func Encoding(db *sql.DB) string {
+func Encoding(db *sqlx.DB) string {
 	return Variable(db, "server_encoding")
 }
 
-func SSL(db *sql.DB) string {
+func SSL(db *sqlx.DB) string {
 	return Variable(db, "ssl")
 }
 
-func Variable(db *sql.DB, variableName string) string {
+func Variable(db *sqlx.DB, variableName string) string {
 	if len(variableName) == 0 {
 		return ""
 	}
@@ -76,7 +66,7 @@ func (do *DatabaseOptions) ConnectionStringDriver(no_password bool) string {
 	return strings.Join(parts, " ")
 }
 
-func Open(options *DatabaseOptions) (*sql.DB, error) {
+func Open(options *DatabaseOptions) (*sqlx.DB, error) {
 	if options == nil {
 		return nil, fmt.Errorf("%s: sql options is nil", DriverName)
 	}
@@ -94,10 +84,10 @@ func Open(options *DatabaseOptions) (*sql.DB, error) {
 	}
 
 	var (
-		db  *sql.DB
+		db  *sqlx.DB
 		err error
 	)
-	db, err = sql.Open(options.Driver, options.ConnectionStringDriver(false))
+	db, err = sqlx.Open(options.Driver, options.ConnectionStringDriver(false))
 	if err != nil {
 		return nil, fmt.Errorf("%s: %s open failed: %s", options.Driver, options.ConnectionStringDriver(true), err)
 	}
@@ -154,6 +144,12 @@ func (db *Database) Initialize(options *DatabaseOptions) (err error) {
 			return fmt.Errorf("DB query from file error: %s, query: %s", err.Error(), create_table_query)
 		}
 	}
+
+	queries, err := dotsql.LoadFromFile("./data/postgre/queries.sql")
+	if err != nil {
+		return fmt.Errorf("DB query from file error: %s", err.Error())
+	}
+	db.Queries = queries
 
 	return nil
 }

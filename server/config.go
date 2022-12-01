@@ -5,36 +5,9 @@ import (
 	"io/ioutil"
 	"os"
 	"sync"
-	"time"
 
 	"gopkg.in/yaml.v2"
 )
-
-type config struct {
-	*sync.RWMutex `yaml:"-"`
-
-	Database *DatabaseOptions `yaml:",omitempty"`
-}
-
-type DatabaseOptions struct {
-	Driver                 string
-	Host                   string
-	Database               string
-	Username               string
-	Password               string
-	GoogleProxyCredentials string        `yaml:"google_proxy_credentials,omitempty"`
-	TLS                    string        `yaml:"tls,omitempty"`
-	TLSCerts               string        `yaml:"tls_certs,omitempty"`
-	TLSCA                  string        `yaml:"tls_ca,omitempty"`
-	TLSClient              string        `yaml:"tls_client,omitempty"`
-	TLSKey                 string        `yaml:"tls_key,omitempty"`
-	MaxOpenConnections     int           `yaml:"max_open_connections"`
-	MaxIdleConnections     int           `yaml:"max_idle_connections"`
-	MaxLifetimeConnection  time.Duration `yaml:"max_lifetime_connection"`
-	MaxIdleTimeConnection  time.Duration `yaml:"max_idle_time_connection"`
-
-	DSN map[string]interface{}
-}
 
 func FileExists(path string) bool {
 	if len(path) == 0 {
