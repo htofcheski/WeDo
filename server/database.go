@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"net"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/qustavo/dotsql"
+	_uuid "github.com/satori/go.uuid"
 )
 
 const DriverName = "postgres"
@@ -191,4 +193,27 @@ func (db *Database) Rollback(tx *sql.Tx) {
 
 func DatabaseNoResults(err error) bool {
 	return err == sql.ErrNoRows
+}
+
+func authUser(loginRequest *LoginRequest) (_uuid.UUID, error) {
+	organization_user_by_username, err := DB.Queries.Raw("organization-user-by-username")
+	if err != nil {
+
+		Log.Error("createOrganizationUser: " + err.Error())
+		return _uuid.Nil, err
+	}
+
+	user := &User{}
+	DB.postgre.Get(user, organization_user_by_username, loginRequest.Username)
+	if len(user.Password) == 0 {
+		msg := "invalid request"
+		Log.Error("createOrganizationUser: " + msg)
+		return _uuid.Nil, errors.New("AAA")
+	}
+
+	if !CheckPasswordHash(loginRequest.Password, user.Password) {
+		return _uuid.Nil, err
+	}
+
+	return user.Uuid, nil
 }

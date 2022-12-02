@@ -82,3 +82,18 @@ func (org *Organization) IsValid() bool {
 
 	return false
 }
+
+type TokenResponse struct {
+	Token string `json:"token"`
+}
+
+type LoginRequest struct {
+	Username string `db:"username" json:"username"`
+	Password string `db:"password" json:"password"`
+}
+
+type User struct {
+	Uuid     _uuid.UUID `db:"uuid" json:"uuid"`
+	Username string     `db:"username" json:"username"`
+	Password string     `db:"password" json:"password"`
+}
