@@ -195,25 +195,27 @@ func DatabaseNoResults(err error) bool {
 	return err == sql.ErrNoRows
 }
 
-func authUser(loginRequest *LoginRequest) (_uuid.UUID, error) {
+func authUser(username string, password string) (_uuid.UUID, error) {
 	organization_user_by_username, err := DB.Queries.Raw("organization-user-by-username")
 	if err != nil {
-
-		Log.Error("createOrganizationUser: " + err.Error())
 		return _uuid.Nil, err
 	}
 
-	user := &User{}
-	DB.postgre.Get(user, organization_user_by_username, loginRequest.Username)
-	if len(user.Password) == 0 {
-		msg := "invalid request"
-		Log.Error("createOrganizationUser: " + msg)
-		return _uuid.Nil, errors.New("AAA")
-	}
-
-	if !CheckPasswordHash(loginRequest.Password, user.Password) {
+	org_user := &OrgUser{}
+	err = DB.postgre.Get(org_user, organization_user_by_username, username)
+	if err != nil {
 		return _uuid.Nil, err
 	}
+	if len(org_user.Password) == 0 {
+		return _uuid.Nil, errors.New("internal problem")
+	}
+	if org_user.DeletedState != 0 {
+		return _uuid.Nil, errors.New("the user is deactivated")
+	}
 
-	return user.Uuid, nil
+	if !CheckPasswordHash(password, org_user.Password) {
+		return _uuid.Nil, errors.New("invalid user and/or password")
+	}
+
+	return org_user.Uuid, nil
 }

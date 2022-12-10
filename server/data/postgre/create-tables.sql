@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS org_user (
   index bigserial PRIMARY KEY,
   uuid uuid NOT NULL UNIQUE,
   org_index bigint REFERENCES organization(index) ON DELETE RESTRICT,
-  username text NOT NULL,
+  username text NOT NULL UNIQUE,
   password text NOT NULL,
   email text DEFAULT '',
   description text DEFAULT '',

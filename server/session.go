@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -25,7 +24,7 @@ func initSessionManager() {
 	sessionManager.Cookie.HttpOnly = true
 }
 
-func GenerateToken(n int) (string, error) {
+func GenerateSessionToken(n int) (string, error) {
 	b := make([]byte, n)
 	_, err := rand.Read(b)
 
@@ -33,31 +32,29 @@ func GenerateToken(n int) (string, error) {
 }
 
 func CreateNewSession(ctx context.Context, user_uuid _uuid.UUID) (string, error) {
-	token, err := GenerateToken(36)
+	session_token, err := GenerateSessionToken(36)
 	if err != nil {
 		return "", err
 	}
 
-	fmt.Println(token, "OVA SE KREEIRA")
+	sessionManager.Put(ctx, session_token, user_uuid.String())
 
-	sessionManager.Put(ctx, token, user_uuid.String())
-
-	return token, nil
+	return session_token, nil
 }
 
 func GetCurrentSession(r *http.Request) (_uuid.UUID, error) {
-	token, err := r.Cookie("test")
+	session_token_cookie, err := r.Cookie("session_token")
 	if err != nil {
-		return _uuid.Nil, errors.New("No token header")
-	}
-	fmt.Println(token.Value, "THIS!")
-	if len(token.Value) == 0 {
-		return _uuid.Nil, errors.New("No token header")
+		return _uuid.Nil, err
 	}
 
-	user_uuid_str := sessionManager.GetString(r.Context(), token.Value)
+	if len(session_token_cookie.Value) == 0 {
+		return _uuid.Nil, errors.New("no session token header")
+	}
+
+	user_uuid_str := sessionManager.GetString(r.Context(), session_token_cookie.Value)
 	if len(user_uuid_str) == 0 {
-		return _uuid.Nil, errors.New("Session not found")
+		return _uuid.Nil, errors.New("session not found")
 	}
 
 	return _uuid.FromStringOrNil(user_uuid_str), nil

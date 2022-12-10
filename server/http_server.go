@@ -1,8 +1,8 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
-	"fmt"
 	"html/template"
 	"net/http"
 	"time"
@@ -26,16 +26,21 @@ func ServeStatic(router *mux.Router, staticDirectory string) {
 func RunHTTP() error {
 	router := mux.NewRouter()
 
-	// not accessible from front end, used to create stuff that is outside of the scope of this project.
-	router.HandleFunc("/create-organization", createOrganization).Methods("GET")
-	router.HandleFunc("/create-organization-user", createOrganizationUser).Methods("GET")
-	router.HandleFunc("/test", loginUser).Methods("GET")
+	/// Not accessible from front end, used to create stuff that is outside of the scope of this project. ///
+
+	router.HandleFunc("/api/v1/create-organization", createOrganization).Methods("GET")
+	router.HandleFunc("/api/v1/create-organization-user", createOrganizationUser).Methods("GET")
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	router.HandleFunc("/api/v1/login", loginUser).Methods("GET")
+	router.HandleFunc("/api/v1/logout", logoutUser).Methods("GET")
 
 	ServeStatic(router, "../client")
 
 	router.HandleFunc("/", handleRoot).Methods("GET")
 
-	return http.ListenAndServe("localhost:8000", sessionManager.LoadAndSave(router))
+	return http.ListenAndServe("localhost:1996", sessionManager.LoadAndSave(router))
 }
 
 func handleRoot(w http.ResponseWriter, r *http.Request) {
@@ -46,7 +51,7 @@ func handleRoot(w http.ResponseWriter, r *http.Request) {
 	}
 
 	state := &State{
-		Icon:       "",
+		Icon:       "assets/src/img/logo.png",
 		Production: false,
 		Data:       state_data,
 	}
@@ -118,7 +123,12 @@ func createOrganizationUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	organization := &Organization{}
-	DB.postgre.Get(organization, organization_by_uuid, org_uuid)
+	err = DB.postgre.Get(organization, organization_by_uuid, org_uuid)
+	if err != nil {
+		boom.Internal(w, err.Error())
+		Log.Error("createOrganizationUser: " + err.Error())
+		return
+	}
 	if !organization.IsValid() {
 		msg := "organization is invalid"
 		boom.Internal(w, msg)
@@ -131,6 +141,26 @@ func createOrganizationUser(w http.ResponseWriter, r *http.Request) {
 		msg := "[username] missing or too short"
 		boom.BadData(w, msg)
 		Log.Error("createOrganizationUser: " + msg)
+		return
+	}
+
+	organization_user_by_username, err := DB.Queries.Raw("organization-user-by-username")
+	if err != nil {
+		boom.Internal(w, err.Error())
+		Log.Error("createOrganizationUser: " + err.Error())
+		return
+	}
+
+	org_user := &OrgUser{}
+	err = DB.postgre.Get(org_user, organization_user_by_username, username)
+	if err == nil && org_user.Index > 0 {
+		msg := "there already exists a user with that username"
+		boom.BadRequest(w, msg)
+		Log.Error("createOrganizationUser: " + msg)
+		return
+	} else if err != nil && err != sql.ErrNoRows {
+		boom.Internal(w, err.Error())
+		Log.Error("createOrganizationUser: " + err.Error())
 		return
 	}
 
@@ -167,55 +197,68 @@ func createOrganizationUser(w http.ResponseWriter, r *http.Request) {
 
 func loginUser(w http.ResponseWriter, r *http.Request) {
 	r_upgraded := UpgradeRequest(r)
+	login_state := LoginState{LoggedIn: false, Message: ""}
 
 	username := r_upgraded.QueryOrDefault("username", "")
 	if len(username) < 3 {
-		msg := "[username] missing or too short"
-		boom.BadData(w, msg)
-		Log.Error("loginUser: " + msg)
+		login_state.Message = "[username] missing or too short"
+		Log.Error("loginUser: " + login_state.Message)
+		writeJSONResponse(w, login_state, http.StatusBadRequest)
 		return
 	}
 
 	password := r_upgraded.QueryOrDefault("password", "")
-
 	if len(password) < 3 {
-		msg := "[password] missing or too short"
-		boom.BadData(w, msg)
-		Log.Error("loginUser: " + msg)
+		login_state.Message = "[password] missing or too short"
+		Log.Error("loginUser: " + login_state.Message)
+		writeJSONResponse(w, login_state, http.StatusBadRequest)
 		return
 	}
 
-	logReq := &LoginRequest{Username: username, Password: password}
-
-	user_uuid, err := authUser(logReq)
+	user_uuid, err := authUser(username, password)
 	if err != nil {
-		fmt.Println("[[Login user]]:", err)
-		w.Write([]byte("NOT OK"))
+		login_state.Message = "Invalid user and/or password."
+		Log.Error("loginUser: " + err.Error())
+		writeJSONResponse(w, login_state, http.StatusBadRequest)
 		return
 	}
 
-	// Create new session
-	token, err := CreateNewSession(r.Context(), user_uuid)
+	session_token, err := CreateNewSession(r.Context(), user_uuid)
 	if err != nil {
-		fmt.Println("[[Create new session]]:", err)
-		w.Write([]byte("NOT OK"))
+		login_state.Message = "Invalid user and/or password."
+		Log.Error("loginUser: " + err.Error())
+		writeJSONResponse(w, login_state, http.StatusBadRequest)
 		return
 	}
 
-	cookie1 := &http.Cookie{Name: "test", Value: token, HttpOnly: true}
-	http.SetCookie(w, cookie1)
-	writeJSONResponse(w, []byte("OK!"), http.StatusCreated)
+	session_token_cookie := &http.Cookie{Name: "session_token", Value: session_token, HttpOnly: true, Path: "/"}
+	http.SetCookie(w, session_token_cookie)
+
+	login_state.LoggedIn = true
+	writeJSONResponse(w, login_state, http.StatusOK)
+}
+
+func logoutUser(w http.ResponseWriter, r *http.Request) {
+	_, err := GetCurrentSession(r)
+	if err != nil {
+		boom.BadRequest(w, err)
+		Log.Error("logoutUser: " + err.Error())
+		return
+	}
+
+	sessionManager.Clear(r.Context())
+	writeJSONResponse(w, map[string]interface{}{}, http.StatusOK)
 }
 
 func writeJSONResponse(w http.ResponseWriter, data interface{}, status int) {
-	js, err := json.Marshal(data)
+	json, err := json.Marshal(data)
 	if err != nil {
-		fmt.Println("[[writeJSONResponse]]:", err)
 		w.WriteHeader(http.StatusInternalServerError)
+		Log.Error("writeJSONResponse: " + err.Error())
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	w.Write(js)
+	w.Write(json)
 }

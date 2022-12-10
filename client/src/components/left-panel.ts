@@ -10,6 +10,8 @@ import '@polymer/iron-icons/maps-icons';
 
 import moment = require('moment');
 
+import { api } from '../api';
+
 export interface CHK_TEAM_USER {
   uuid?: string;
   name?: string;
@@ -55,7 +57,15 @@ export class LeftPanel extends LitElement {
       </div>
       <div class="flex"></div>
       <div class="layout vertical center-center outside-icons">
-        <iron-icon icon="maps:directions-walk" style="width: 1.5rem;"></iron-icon>
+        <iron-icon
+          icon="maps:directions-walk"
+          style="width: 1.5rem;"
+          @click=${() => {
+            api.logout().then(() => {
+              location.reload();
+            });
+          }}
+        ></iron-icon>
       </div>
       <div class="flex" style="flex: 0.04"></div>
     </div>`;

@@ -72,28 +72,32 @@ type Organization struct {
 	Name         string     `db:"name" json:"name"`
 	Created      time.Time  `db:"created" json:"created"`
 	Updated      time.Time  `db:"updated" json:"updated"`
-	DeletedState bool       `db:"deleted_state" json:"-"`
+	DeletedState int        `db:"deleted_state" json:"-"`
 }
 
 func (org *Organization) IsValid() bool {
-	if len(org.Name) >= 3 && org.Index > 0 && org.Uuid != _uuid.Nil {
+	if len(org.Name) >= 3 && org.Index > 0 && org.Uuid != _uuid.Nil && org.DeletedState == 0 {
 		return true
 	}
 
 	return false
 }
 
-type TokenResponse struct {
-	Token string `json:"token"`
+type LoginState struct {
+	LoggedIn bool
+	Message  string
 }
 
-type LoginRequest struct {
-	Username string `db:"username" json:"username"`
-	Password string `db:"password" json:"password"`
-}
-
-type User struct {
-	Uuid     _uuid.UUID `db:"uuid" json:"uuid"`
-	Username string     `db:"username" json:"username"`
-	Password string     `db:"password" json:"password"`
+type OrgUser struct {
+	Index          uint64     `db:"index" json:"-"`
+	Uuid           _uuid.UUID `db:"uuid" json:"uuid"`
+	OrgIndex       uint64     `db:"org_index" json:"-"`
+	Username       string     `db:"username" json:"username"`
+	Password       string     `db:"password" json:"password"`
+	Email          string     `db:"email" json:"email"`
+	Description    string     `db:"description" json:"description"`
+	ProfilePicture string     `db:"profile_picture" json:"profile_picture"`
+	Created        time.Time  `db:"created" json:"created"`
+	Updated        time.Time  `db:"updated" json:"updated"`
+	DeletedState   int        `db:"deleted_state" json:"-"`
 }
