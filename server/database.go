@@ -279,3 +279,7 @@ func teamsForOrgUser(user_uuid _uuid.UUID) (TeamList, error) {
 
 	return TeamList{}, nil
 }
+
+// func teamStateForOrgUser(user_uuid _uuid.UUID, team_uuid _uuid.UUID) {
+
+// }

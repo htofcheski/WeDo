@@ -1,5 +1,5 @@
 import { LitElement, html, customElement, property, css, TemplateResult } from 'lit-element';
-
+import { database } from '../database';
 import { all } from '../styles/styles';
 import randomColor = require('randomcolor');
 
@@ -58,10 +58,19 @@ export class LeftPanel extends LitElement {
       <div class="flex"></div>
       <div class="layout vertical center-center outside-icons">
         <iron-icon
+          icon="delete"
+          style="width: 1.5rem;"
+          @click=${() => {
+            database.removeSelectedTeam();
+            location.reload();
+          }}
+        ></iron-icon>
+        <iron-icon
           icon="maps:directions-walk"
           style="width: 1.5rem;"
           @click=${() => {
             api.logout().then(() => {
+              database.removeSelectedTeam();
               location.reload();
             });
           }}

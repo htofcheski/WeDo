@@ -150,3 +150,8 @@ func (tul TeamUserList) TeamIndexes() []uint64 {
 
 	return indexes
 }
+
+// type TeamUserState struct {
+// 	Organization Organization `json:"organization"`
+
+// }
