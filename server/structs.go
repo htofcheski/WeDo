@@ -47,7 +47,8 @@ type Database struct {
 
 	postgre *sqlx.DB
 
-	Queries *dotsql.DotSql
+	Queries       *dotsql.DotSql
+	QueriesRawMap map[string]string
 }
 
 //////////////////// <-Database ////////////////////
@@ -93,11 +94,59 @@ type OrgUser struct {
 	Uuid           _uuid.UUID `db:"uuid" json:"uuid"`
 	OrgIndex       uint64     `db:"org_index" json:"-"`
 	Username       string     `db:"username" json:"username"`
-	Password       string     `db:"password" json:"password"`
+	Password       string     `db:"password" json:"-"`
 	Email          string     `db:"email" json:"email"`
 	Description    string     `db:"description" json:"description"`
 	ProfilePicture string     `db:"profile_picture" json:"profile_picture"`
 	Created        time.Time  `db:"created" json:"created"`
 	Updated        time.Time  `db:"updated" json:"updated"`
 	DeletedState   int        `db:"deleted_state" json:"-"`
+}
+
+func (user *OrgUser) IsValid() bool {
+	if len(user.Username) >= 3 && user.Index > 0 && user.Uuid != _uuid.Nil && user.DeletedState == 0 {
+		return true
+	}
+
+	return false
+}
+
+type Team struct {
+	Index        uint64     `db:"index" json:"-"`
+	Uuid         _uuid.UUID `db:"uuid" json:"uuid"`
+	Name         string     `db:"name" json:"name"`
+	Created      time.Time  `db:"created" json:"created"`
+	Updated      time.Time  `db:"updated" json:"updated"`
+	DeletedState int        `db:"deleted_state" json:"-"`
+}
+
+type TeamList []*Team
+
+func (t *Team) IsValid() bool {
+	if len(t.Name) >= 3 && t.Index > 0 && t.Uuid != _uuid.Nil && t.DeletedState == 0 {
+		return true
+	}
+
+	return false
+}
+
+type TeamUser struct {
+	Index        uint64     `db:"index" json:"-"`
+	Uuid         _uuid.UUID `db:"uuid" json:"uuid"`
+	TeamIndex    uint64     `db:"team_index" json:"-"`
+	UserIndex    uint64     `db:"user_index" json:"-"`
+	Created      time.Time  `db:"created" json:"created"`
+	Updated      time.Time  `db:"updated" json:"updated"`
+	DeletedState int        `db:"deleted_state" json:"-"`
+}
+
+type TeamUserList []*TeamUser
+
+func (tul TeamUserList) TeamIndexes() []uint64 {
+	indexes := []uint64{}
+	for _, tu := range tul {
+		indexes = append(indexes, tu.TeamIndex)
+	}
+
+	return indexes
 }

@@ -152,6 +152,7 @@ func (db *Database) Initialize(options *DatabaseOptions) (err error) {
 		return fmt.Errorf("DB query from file error: %s", err.Error())
 	}
 	db.Queries = queries
+	db.QueriesRawMap = queries.QueryMap()
 
 	return nil
 }
@@ -196,13 +197,8 @@ func DatabaseNoResults(err error) bool {
 }
 
 func authUser(username string, password string) (_uuid.UUID, error) {
-	organization_user_by_username, err := DB.Queries.Raw("organization-user-by-username")
-	if err != nil {
-		return _uuid.Nil, err
-	}
-
 	org_user := &OrgUser{}
-	err = DB.postgre.Get(org_user, organization_user_by_username, username)
+	err := DB.postgre.Get(org_user, DB.QueriesRawMap["organization-user-by-username"], username)
 	if err != nil {
 		return _uuid.Nil, err
 	}
@@ -218,4 +214,68 @@ func authUser(username string, password string) (_uuid.UUID, error) {
 	}
 
 	return org_user.Uuid, nil
+}
+
+func usernameExists(username string) error {
+	org_user := &OrgUser{}
+	err := DB.postgre.Get(org_user, DB.QueriesRawMap["organization-user-by-username"], username)
+	if DatabaseNoResults(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	return errors.New("username already exists")
+}
+
+func userInTeam(user *OrgUser, team *Team) error {
+	team_user := &TeamUser{}
+	err := DB.postgre.Get(team_user, DB.QueriesRawMap["team-user-by-team-and-user"], team.Index, user.Index)
+	if DatabaseNoResults(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	return errors.New("user is already on that team")
+}
+
+func teamsForOrgUser(user_uuid _uuid.UUID) (TeamList, error) {
+	org_user := &OrgUser{}
+	err := DB.postgre.Get(org_user, DB.QueriesRawMap["organization-user-by-uuid"], user_uuid)
+	if err != nil {
+		Log.Error("teamsForOrgUser: " + err.Error())
+		return TeamList{}, err
+	}
+	if !org_user.IsValid() {
+		msg := "org user is invalid"
+		Log.Error("createTeamUser: " + msg)
+		return TeamList{}, errors.New(msg)
+	}
+
+	teams_user := TeamUserList{}
+	err = DB.postgre.Select(&teams_user, DB.QueriesRawMap["teams-user-by-user"], org_user.Index)
+	if err != nil {
+		Log.Error("teamsForOrgUser: " + err.Error())
+		return TeamList{}, err
+	}
+
+	if len(teams_user) > 0 {
+		teams := TeamList{}
+		in_query, args, err := sqlx.In(DB.QueriesRawMap["teams-for-org-user"], teams_user.TeamIndexes())
+		if err != nil {
+			Log.Error("teamsForOrgUser: " + err.Error())
+			return TeamList{}, err
+		}
+		err = DB.postgre.Select(&teams, DB.postgre.Rebind(in_query), args...)
+		if err != nil {
+			Log.Error("teamsForOrgUser: " + err.Error())
+			return TeamList{}, err
+		}
+		return teams, nil
+	}
+
+	return TeamList{}, nil
 }

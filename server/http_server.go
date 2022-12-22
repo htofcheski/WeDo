@@ -30,6 +30,8 @@ func RunHTTP() error {
 
 	router.HandleFunc("/api/v1/create-organization", createOrganization).Methods("GET")
 	router.HandleFunc("/api/v1/create-organization-user", createOrganizationUser).Methods("GET")
+	router.HandleFunc("/api/v1/create-team", createTeam).Methods("GET")
+	router.HandleFunc("/api/v1/create-team-user", createTeamUser).Methods("GET")
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -46,21 +48,23 @@ func RunHTTP() error {
 func handleRoot(w http.ResponseWriter, r *http.Request) {
 	var templates *template.Template
 	templates = template.Must(templates.ParseGlob("templates/*.html"))
-	state_data := map[string]interface{}{
-		"test": "test",
-	}
+	state_data := map[string]interface{}{}
 
 	state := &State{
 		Icon:       "assets/src/img/logo.png",
 		Production: false,
 		Data:       state_data,
 	}
-	_, err := GetCurrentSession(r)
-
+	user_uuid, err := GetCurrentSession(r)
 	if err != nil {
 		templates.ExecuteTemplate(w, "login.html", state)
 		return
 	}
+
+	teams, err := teamsForOrgUser(user_uuid)
+
+	state_data["teams"] = teams
+	state.Data = state_data
 
 	templates.ExecuteTemplate(w, "index.html", state)
 }
@@ -116,14 +120,9 @@ func createOrganizationUser(w http.ResponseWriter, r *http.Request) {
 		Log.Error("createOrganizationUser: " + msg)
 		return
 	}
-	organization_by_uuid, err := DB.Queries.Raw("organization-by-uuid")
-	if err != nil {
-		boom.Internal(w, err.Error())
-		Log.Error("createOrganizationUser: " + err.Error())
-		return
-	}
+
 	organization := &Organization{}
-	err = DB.postgre.Get(organization, organization_by_uuid, org_uuid)
+	err := DB.postgre.Get(organization, DB.QueriesRawMap["organization-by-uuid"], org_uuid)
 	if err != nil {
 		boom.Internal(w, err.Error())
 		Log.Error("createOrganizationUser: " + err.Error())
@@ -144,15 +143,15 @@ func createOrganizationUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	organization_user_by_username, err := DB.Queries.Raw("organization-user-by-username")
+	err = usernameExists(username)
 	if err != nil {
-		boom.Internal(w, err.Error())
+		boom.BadData(w, err.Error())
 		Log.Error("createOrganizationUser: " + err.Error())
 		return
 	}
 
 	org_user := &OrgUser{}
-	err = DB.postgre.Get(org_user, organization_user_by_username, username)
+	err = DB.postgre.Get(org_user, DB.QueriesRawMap["organization-user-by-username"], username)
 	if err == nil && org_user.Index > 0 {
 		msg := "there already exists a user with that username"
 		boom.BadRequest(w, msg)
@@ -189,6 +188,114 @@ func createOrganizationUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		boom.Internal(w, err.Error())
 		Log.Error("createOrganizationUser: " + err.Error())
+		return
+	}
+
+	w.Write([]byte("OK!"))
+}
+
+func createTeam(w http.ResponseWriter, r *http.Request) {
+	r_upgraded := UpgradeRequest(r)
+
+	api_key := r_upgraded.QueryOrDefault("api_key", "")
+	if api_key != API_KEY {
+		msg := "[api_key] missing or invalid"
+		boom.Unathorized(w, msg)
+		Log.Error("createTeam: " + msg)
+		return
+	}
+
+	name := r_upgraded.QueryOrDefault("name", "")
+	if len(name) < 3 {
+		msg := "[name] missing or too short"
+		boom.BadData(w, msg)
+		Log.Error("createTeam: " + msg)
+		return
+	}
+
+	uuid := _uuid.NewV4()
+	now := time.Now().UTC()
+
+	_, err := DB.Queries.Exec(DB.postgre, "create-team", uuid, name, now, now)
+	if err != nil {
+		boom.Internal(w, err.Error())
+		Log.Error("createTeam: " + err.Error())
+		return
+	}
+
+	w.Write([]byte("OK!"))
+}
+
+func createTeamUser(w http.ResponseWriter, r *http.Request) {
+	r_upgraded := UpgradeRequest(r)
+
+	api_key := r_upgraded.QueryOrDefault("api_key", "")
+	if api_key != API_KEY {
+		msg := "[api_key] missing or invalid"
+		boom.Unathorized(w, msg)
+		Log.Error("createTeamUser: " + msg)
+		return
+	}
+
+	team_uuid_str := r_upgraded.QueryOrDefault("team_uuid", "")
+	team_uuid := _uuid.FromStringOrNil(team_uuid_str)
+	if team_uuid == _uuid.Nil {
+		msg := "[team_uuid] missing or invalid"
+		boom.BadData(w, msg)
+		Log.Error("createTeamUser: " + msg)
+		return
+	}
+
+	team := &Team{}
+	err := DB.postgre.Get(team, DB.QueriesRawMap["team-by-uuid"], team_uuid)
+	if err != nil {
+		boom.Internal(w, err.Error())
+		Log.Error("createTeamUser: " + err.Error())
+		return
+	}
+	if !team.IsValid() {
+		msg := "team is invalid"
+		boom.Internal(w, msg)
+		Log.Error("createTeamUser: " + msg)
+		return
+	}
+
+	org_user_uuid_str := r_upgraded.QueryOrDefault("org_user_uuid", "")
+	org_user_uuid := _uuid.FromStringOrNil(org_user_uuid_str)
+	if org_user_uuid == _uuid.Nil {
+		msg := "[org_user_uuid] missing or invalid"
+		boom.BadData(w, msg)
+		Log.Error("createTeamUser: " + msg)
+		return
+	}
+	org_user := &OrgUser{}
+	err = DB.postgre.Get(org_user, DB.QueriesRawMap["organization-user-by-uuid"], org_user_uuid)
+	if err != nil {
+		boom.Internal(w, err.Error())
+		Log.Error("createTeamUser: " + err.Error())
+		return
+	}
+	if !org_user.IsValid() {
+		msg := "org user is invalid"
+		boom.Internal(w, msg)
+		Log.Error("createTeamUser: " + msg)
+		return
+	}
+
+	err = userInTeam(org_user, team)
+	if err != nil {
+		boom.BadData(w, err.Error())
+		Log.Error("createTeamUser: " + err.Error())
+		return
+	}
+
+	uuid := _uuid.NewV4()
+	now := time.Now().UTC()
+
+	_, err = DB.Queries.Exec(DB.postgre, "create-team-user", uuid, team.Index, org_user.Index, now, now)
+	if err != nil {
+		boom.Internal(w, err.Error())
+		Log.Error("createTeamUser: " + err.Error())
 		return
 	}
 
