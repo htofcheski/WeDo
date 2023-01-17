@@ -8,6 +8,7 @@ import '@polymer/paper-spinner/paper-spinner';
 import '@vaadin/vaadin-combo-box';
 
 import { all } from './styles/styles';
+import { api } from './api';
 import './components/right-panel';
 import './components/top-header';
 import './components/left-panel';
@@ -27,7 +28,7 @@ export class WeDo extends LitElement {
   selected_team_uuid: string = '';
 
   @property({ attribute: false })
-  available_teams: Team[] = window.State.Data.teams;
+  available_teams: Team[] = window.State.Data.teams || [];
 
   @property({ attribute: false, type: Boolean })
   loading: boolean = true;
@@ -106,11 +107,31 @@ export class WeDo extends LitElement {
                 }}
               ></vaadin-combo-box>
             </div>`
-          : html` <div class="center-div">You don't belong to any team.</div>`}`;
+          : html` <div class="center-div">
+              You don't belong to any team.
+              <iron-icon
+                icon="maps:directions-walk"
+                style="width: 1.5rem;"
+                @click=${() => {
+                  api.logout().then(() => {
+                    database.removeSelectedTeam();
+                    location.reload();
+                  });
+                }}
+              ></iron-icon>
+            </div>`}`;
   }
 
   protected firstUpdated() {
     this.selectedTeam();
+  }
+
+  protected updated(_changedProperties: Map<string | number | symbol, unknown>): void {
+    if (_changedProperties.has('selected_team_uuid') && this.selected_team_uuid.length > 0) {
+      api.teamState(this.selected_team_uuid).then((resp) => {
+        console.log(resp);
+      });
+    }
   }
 
   selectedTeam() {

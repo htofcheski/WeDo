@@ -77,7 +77,7 @@ type Organization struct {
 }
 
 func (org *Organization) IsValid() bool {
-	if len(org.Name) >= 3 && org.Index > 0 && org.Uuid != _uuid.Nil && org.DeletedState == 0 {
+	if len(org.Name) >= 3 && org.Index > 0 && org.Uuid != _uuid.Nil {
 		return true
 	}
 
@@ -104,7 +104,7 @@ type OrgUser struct {
 }
 
 func (user *OrgUser) IsValid() bool {
-	if len(user.Username) >= 3 && user.Index > 0 && user.Uuid != _uuid.Nil && user.DeletedState == 0 {
+	if len(user.Username) >= 3 && user.Index > 0 && user.Uuid != _uuid.Nil {
 		return true
 	}
 
@@ -122,8 +122,18 @@ type Team struct {
 
 type TeamList []*Team
 
+func (tl TeamList) hasTeam(team_uuid _uuid.UUID) *Team {
+	for _, t := range tl {
+		if t.Uuid == team_uuid {
+			return t
+		}
+	}
+
+	return nil
+}
+
 func (t *Team) IsValid() bool {
-	if len(t.Name) >= 3 && t.Index > 0 && t.Uuid != _uuid.Nil && t.DeletedState == 0 {
+	if len(t.Name) >= 3 && t.Index > 0 && t.Uuid != _uuid.Nil {
 		return true
 	}
 
@@ -151,7 +161,48 @@ func (tul TeamUserList) TeamIndexes() []uint64 {
 	return indexes
 }
 
-// type TeamUserState struct {
-// 	Organization Organization `json:"organization"`
+func (tul TeamUserList) TeamUserIndexes() []uint64 {
+	indexes := []uint64{}
+	for _, tu := range tul {
+		indexes = append(indexes, tu.UserIndex)
+	}
 
-// }
+	return indexes
+}
+
+type TeamProject struct {
+	Index        uint64     `db:"index" json:"-"`
+	Uuid         _uuid.UUID `db:"uuid" json:"uuid"`
+	TeamIndex    uint64     `db:"team_index" json:"-"`
+	TasksUuids   string     `db:"tasks_uuids" json:"tasks_uuids"`
+	Name         string     `db:"name" json:"name"`
+	Description  string     `db:"description" json:"description"`
+	Created      time.Time  `db:"created" json:"created"`
+	Updated      time.Time  `db:"updated" json:"updated"`
+	DeletedState int        `db:"deleted_state" json:"-"`
+}
+
+type TeamProjectList []*TeamProject
+
+type TeamTask struct {
+	Index              uint64     `db:"index" json:"-"`
+	Uuid               _uuid.UUID `db:"uuid" json:"uuid"`
+	TeamIndex          uint64     `db:"team_index" json:"-"`
+	AssignedUsersUuids string     `db:"assigned_users_uuids" json:"assigned_users_uuids"`
+	Name               string     `db:"name" json:"name"`
+	Description        string     `db:"description" json:"description"`
+	Goal               string     `db:"goal" json:"goal"`
+	Created            time.Time  `db:"created" json:"created"`
+	Updated            time.Time  `db:"updated" json:"updated"`
+	DeletedState       int        `db:"deleted_state" json:"-"`
+}
+
+type TeamTaskList []*TeamTask
+
+type TeamState struct {
+	TeamUuid         _uuid.UUID          `json:"team_uuid"`
+	TeamUsers        TeamUserList        `json:"team_users"`
+	TeamToOrgUserMap map[string]*OrgUser `json:"team_to_org_user_map"`
+	TeamProjects     TeamProjectList     `json:"team_projects"`
+	TeamTasks        TeamTaskList        `json:"team_tasks"`
+}

@@ -38,11 +38,13 @@ func RunHTTP() error {
 	router.HandleFunc("/api/v1/login", loginUser).Methods("GET")
 	router.HandleFunc("/api/v1/logout", logoutUser).Methods("GET")
 
+	router.HandleFunc("/api/v1/team-state", teamState).Methods("GET")
+
 	ServeStatic(router, "../client")
 
 	router.HandleFunc("/", handleRoot).Methods("GET")
 
-	return http.ListenAndServe("localhost:1996", sessionManager.LoadAndSave(router))
+	return http.ListenAndServe("localhost:2023", sessionManager.LoadAndSave(router))
 }
 
 func handleRoot(w http.ResponseWriter, r *http.Request) {
@@ -55,15 +57,17 @@ func handleRoot(w http.ResponseWriter, r *http.Request) {
 		Production: false,
 		Data:       state_data,
 	}
-	user_uuid, err := GetCurrentSession(r)
+
+	org_user, org, teams, err := apiUserState(r)
 	if err != nil {
 		templates.ExecuteTemplate(w, "login.html", state)
 		return
 	}
 
-	teams, err := teamsForOrgUser(user_uuid)
-
+	state_data["logged_in_user"] = org_user
+	state_data["organization"] = org
 	state_data["teams"] = teams
+
 	state.Data = state_data
 
 	templates.ExecuteTemplate(w, "index.html", state)
@@ -355,6 +359,37 @@ func logoutUser(w http.ResponseWriter, r *http.Request) {
 
 	sessionManager.Clear(r.Context())
 	writeJSONResponse(w, map[string]interface{}{}, http.StatusOK)
+}
+
+func teamState(w http.ResponseWriter, r *http.Request) {
+	r_upgraded := UpgradeRequest(r)
+
+	team_uuid_str := r_upgraded.QueryOrDefault("team_uuid", "")
+	team_uuid := _uuid.FromStringOrNil(team_uuid_str)
+	if team_uuid == _uuid.Nil {
+		msg := "[team_uuid] missing or invalid"
+		boom.BadData(w, msg)
+		Log.Error("teamState: " + msg)
+		return
+	}
+
+	_, _, teams, err := apiUserState(r)
+	if err != nil {
+		boom.BadData(w, err.Error())
+		Log.Error("teamState: " + err.Error())
+		return
+	}
+
+	team := teams.hasTeam(team_uuid)
+	if team == nil {
+		msg := "no permission for team"
+		boom.BadData(w, msg)
+		Log.Error("teamState: " + msg)
+		return
+	}
+
+	team_state, _ := teamStateForOrgUserTeam(team)
+	writeJSONResponse(w, team_state, http.StatusOK)
 }
 
 func writeJSONResponse(w http.ResponseWriter, data interface{}, status int) {

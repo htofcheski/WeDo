@@ -69,3 +69,27 @@ func CheckPasswordHash(password, hash string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return err == nil
 }
+
+func apiUserState(r *http.Request) (*OrgUser, *Organization, TeamList, error) {
+	user_uuid, err := GetCurrentSession(r)
+	if err != nil {
+		return &OrgUser{}, &Organization{}, TeamList{}, err
+	}
+
+	org_user, err := orgUserByUUID(user_uuid)
+	if err != nil {
+		return &OrgUser{}, &Organization{}, TeamList{}, err
+	}
+
+	org, err := organizationForOrgUser(org_user)
+	if err != nil {
+		return &OrgUser{}, &Organization{}, TeamList{}, err
+	}
+
+	teams, err := teamsForOrgUser(org_user)
+	if err != nil {
+		return &OrgUser{}, &Organization{}, TeamList{}, err
+	}
+
+	return org_user, org, teams, nil
+}

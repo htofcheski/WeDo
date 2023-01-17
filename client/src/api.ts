@@ -1,4 +1,4 @@
-const json_post_headers = Object.assign(
+const json_headers = Object.assign(
   {},
   {},
   {
@@ -17,29 +17,33 @@ async function jsonResponse(resp: Response) {
   throw `${resp.status} ${resp.statusText} - ${resp.url}`;
 }
 
-function query(query: any, skip_empty: boolean = false): string {
-  if (!query || typeof query !== 'object') {
-    return '';
-  }
-  if (skip_empty) {
-    Object.keys(query).forEach((key) => {
-      if (query[key] === '') delete query[key];
-    });
-  }
-  var serializesd = new URLSearchParams(query).toString();
-  return serializesd ? '?' + serializesd : '';
-}
-
 export interface APIResponse {
   error: string;
   details?: any;
 }
 
 export const api = {
+  /**
+   *
+   * @param query
+   * @return string
+   */
+  query(query: any): string {
+    if (!query || typeof query !== 'object') {
+      return '';
+    }
+    var serializesd = new URLSearchParams(query).toString();
+    return serializesd ? '?' + serializesd : '';
+  },
   logout() {
     return fetch(`/api/v1/logout`, {
       method: 'GET',
-      headers: json_post_headers,
+      headers: json_headers,
     }).then(jsonResponse);
+  },
+  teamState(team_uuid: string): Promise<any> {
+    return fetch(`/api/v1/team-state${this.query({ team_uuid: team_uuid })}`, { headers: json_headers }).then(
+      jsonResponse
+    );
   },
 };

@@ -205,9 +205,6 @@ func authUser(username string, password string) (_uuid.UUID, error) {
 	if len(org_user.Password) == 0 {
 		return _uuid.Nil, errors.New("internal problem")
 	}
-	if org_user.DeletedState != 0 {
-		return _uuid.Nil, errors.New("the user is deactivated")
-	}
 
 	if !CheckPasswordHash(password, org_user.Password) {
 		return _uuid.Nil, errors.New("invalid user and/or password")
@@ -242,21 +239,9 @@ func userInTeam(user *OrgUser, team *Team) error {
 	return errors.New("user is already on that team")
 }
 
-func teamsForOrgUser(user_uuid _uuid.UUID) (TeamList, error) {
-	org_user := &OrgUser{}
-	err := DB.postgre.Get(org_user, DB.QueriesRawMap["organization-user-by-uuid"], user_uuid)
-	if err != nil {
-		Log.Error("teamsForOrgUser: " + err.Error())
-		return TeamList{}, err
-	}
-	if !org_user.IsValid() {
-		msg := "org user is invalid"
-		Log.Error("createTeamUser: " + msg)
-		return TeamList{}, errors.New(msg)
-	}
-
+func teamsForOrgUser(org_user *OrgUser) (TeamList, error) {
 	teams_user := TeamUserList{}
-	err = DB.postgre.Select(&teams_user, DB.QueriesRawMap["teams-user-by-user"], org_user.Index)
+	err := DB.postgre.Select(&teams_user, DB.QueriesRawMap["teams-user-by-user"], org_user.Index)
 	if err != nil {
 		Log.Error("teamsForOrgUser: " + err.Error())
 		return TeamList{}, err
@@ -280,6 +265,67 @@ func teamsForOrgUser(user_uuid _uuid.UUID) (TeamList, error) {
 	return TeamList{}, nil
 }
 
-// func teamStateForOrgUser(user_uuid _uuid.UUID, team_uuid _uuid.UUID) {
+func organizationForOrgUser(org_user *OrgUser) (*Organization, error) {
+	organization := &Organization{}
+	err := DB.postgre.Get(organization, DB.QueriesRawMap["organization-by-index"], org_user.OrgIndex)
+	if err != nil {
+		Log.Error("organizationForOrgUser: " + err.Error())
+		return &Organization{}, err
+	}
 
-// }
+	return organization, nil
+}
+
+func orgUserByUUID(user_uuid _uuid.UUID) (*OrgUser, error) {
+	org_user := &OrgUser{}
+	err := DB.postgre.Get(org_user, DB.QueriesRawMap["organization-user-by-uuid"], user_uuid)
+	if err != nil {
+		Log.Error("orgUserByUUID: " + err.Error())
+		return &OrgUser{}, err
+	}
+	if !org_user.IsValid() {
+		msg := "org user is invalid"
+		Log.Error("orgUserByUUID: " + msg)
+		return &OrgUser{}, errors.New(msg)
+	}
+	return org_user, nil
+}
+
+func orgUserByIndex(user_index uint64) (*OrgUser, error) {
+	org_user := &OrgUser{}
+	err := DB.postgre.Get(org_user, DB.QueriesRawMap["organization-user-by-index"], user_index)
+	if err != nil {
+		Log.Error("orgUserByIndex: " + err.Error())
+		return &OrgUser{}, err
+	}
+	if !org_user.IsValid() {
+		msg := "org user is invalid"
+		Log.Error("orgUserByIndex: " + msg)
+		return &OrgUser{}, errors.New(msg)
+	}
+	return org_user, nil
+}
+
+func teamStateForOrgUserTeam(team *Team) (TeamState, error) {
+	team_state := TeamState{TeamUuid: team.Uuid}
+
+	err := DB.postgre.Select(&team_state.TeamUsers, DB.QueriesRawMap["team-users-by-team-index"], team.Index)
+	if err != nil {
+		Log.Error("teamStateForOrgUserTeam: " + err.Error())
+		return TeamState{}, err
+	}
+
+	team_state.TeamToOrgUserMap = make(map[string]*OrgUser)
+	for _, team_user := range team_state.TeamUsers {
+		if _, ok := team_state.TeamToOrgUserMap[team_user.Uuid.String()]; !ok {
+			org_user, err := orgUserByIndex(team_user.UserIndex)
+			if err != nil {
+				Log.Error("teamStateForOrgUserTeam: " + err.Error())
+				return TeamState{}, err
+			}
+			team_state.TeamToOrgUserMap[team_user.Uuid.String()] = org_user
+		}
+	}
+
+	return team_state, nil
+}
