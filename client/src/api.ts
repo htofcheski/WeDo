@@ -1,3 +1,5 @@
+import { CreateProjectReq, CreateTaskReq } from './types';
+
 const json_headers = Object.assign(
   {},
   {},
@@ -45,5 +47,20 @@ export const api = {
     return fetch(`/api/v1/team-state${this.query({ team_uuid: team_uuid })}`, { headers: json_headers }).then(
       jsonResponse
     );
+  },
+  createProject(req: CreateProjectReq): Promise<any> {
+    return fetch('/api/v1/create-project', {
+      headers: json_headers,
+      method: 'POST',
+      body: JSON.stringify(req),
+    }).then(jsonResponse);
+  },
+
+  createTask(req: CreateTaskReq): Promise<any> {
+    return fetch('/api/v1/create-task', {
+      headers: json_headers,
+      method: 'POST',
+      body: JSON.stringify(req),
+    }).then(jsonResponse);
   },
 };

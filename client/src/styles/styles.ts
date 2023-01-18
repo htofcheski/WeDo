@@ -339,19 +339,18 @@ export const shared = css`
   :host {
     --theme-primary: #7771eb;
   }
-
-  .scroll-style::-webkit-scrollbar {
+  :host ::-webkit-scrollbar {
     width: 10px;
   }
-  .scroll-style::-webkit-scrollbar-track {
+  :host ::-webkit-scrollbar-track {
     box-shadow: inset 0 0 10px whitesmoke;
     border-radius: 50px;
   }
-  .scroll-style::-webkit-scrollbar-thumb {
+  :host ::-webkit-scrollbar-thumb {
     background: silver;
     border-radius: 50px;
   }
-  .scroll-style::-webkit-scrollbar-thumb:hover {
+  :host ::-webkit-scrollbar-thumb:hover {
     background: var(--theme-primary);
   }
 

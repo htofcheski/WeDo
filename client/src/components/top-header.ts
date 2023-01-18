@@ -6,7 +6,10 @@ import randomColor = require('randomcolor');
 import '@polymer/iron-image';
 import '@polymer/paper-icon-button/paper-icon-button';
 
+import { CreateProjectReq, CreateTaskReq } from '../types';
+
 import moment = require('moment');
+import { api } from '../api';
 
 export interface CHK_TEAM_USER {
   uuid?: string;
@@ -21,7 +24,12 @@ export class TopHeader extends LitElement {
   page_name: string = 'My Projects';
 
   @property({ attribute: false })
-  user: CHK_TEAM_USER = { uuid: 'aa', name: 'Hristijan Tofcheski', email: 'diplomska@pls.com' };
+  user: CHK_TEAM_USER = {
+    uuid: window?.State?.Data?.logged_in_user?.uuid,
+    name: window?.State?.Data?.logged_in_user?.username,
+    email: 'diplomska@pls.com',
+  };
+
   static styles = all.concat(css`
     :host {
       display: flex;
@@ -56,6 +64,18 @@ export class TopHeader extends LitElement {
           ?hidden=${this.page_name != 'My Projects'}
           icon="add-circle"
           style="color: var(--theme-primary);"
+          @click=${() => {
+            console.log('TEST!');
+            let req = {
+              team_uuid: 'a559ca29-5f66-4f20-82f7-c8323d7a3a13',
+              name: 'Another test',
+              description: '2023 desc test',
+              goal: 'feb_goal',
+            } as CreateTaskReq;
+            api.createTask(req).then((resp) => {
+              console.log('BBB', resp);
+            });
+          }}
         ></paper-icon-button>
       </div>
       <div class="flex"></div>

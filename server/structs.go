@@ -56,7 +56,8 @@ type Database struct {
 //////////////////// Request-> ////////////////////
 
 type Request struct {
-	*http.Request
+	Base *http.Request
+	body []byte // Body bytes, read to this buffer when queried.
 }
 
 //////////////////// <-Request ////////////////////
@@ -194,6 +195,7 @@ type TeamTask struct {
 	Goal               string     `db:"goal" json:"goal"`
 	Created            time.Time  `db:"created" json:"created"`
 	Updated            time.Time  `db:"updated" json:"updated"`
+	State              int        `db:"state" json:"state"`
 	DeletedState       int        `db:"deleted_state" json:"-"`
 }
 
@@ -205,4 +207,19 @@ type TeamState struct {
 	TeamToOrgUserMap map[string]*OrgUser `json:"team_to_org_user_map"`
 	TeamProjects     TeamProjectList     `json:"team_projects"`
 	TeamTasks        TeamTaskList        `json:"team_tasks"`
+}
+
+type CreateProjectReq struct {
+	TeamUuid    string   `json:"team_uuid"`
+	TasksUuids  []string `json:"tasks_uuids"`
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+}
+
+type CreateTaskReq struct {
+	TeamUuid           string   `json:"team_uuid"`
+	AssignedUsersUuids []string `json:"assigned_users_uuids"`
+	Name               string   `json:"name"`
+	Description        string   `json:"description"`
+	Goal               string   `json:"goal"`
 }

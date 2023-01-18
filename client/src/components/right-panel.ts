@@ -243,7 +243,7 @@ export class RightPanel extends LitElement {
         <div class="layout horizontal justified">
           <span class="section-title">Recent Task Updates</span>
         </div>
-        <div class="layout vertical scroll-style push-down" style="overflow-y: scroll; height: 100%;">
+        <div class="layout vertical push-down" style="overflow-y: scroll; height: 100%;">
           <div class="layout vertical justified">${this.renderRecentTasks()}</div>
         </div>
       </div>

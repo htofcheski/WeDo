@@ -33,6 +33,9 @@ export class WeDo extends LitElement {
   @property({ attribute: false, type: Boolean })
   loading: boolean = true;
 
+  @property({ attribute: false })
+  team_state: any = undefined;
+
   static styles = all.concat(css`
     .wedo-page,
     iron-pages {
@@ -81,7 +84,7 @@ export class WeDo extends LitElement {
                   style="width: 75%;outline: 0.2rem solid #f2f3f5; z-index: 999; background: white;"
                 >
                   <iron-pages selected=${this.page} attr-for-selected="page">
-                    <div class="wedo-page" page="one"><task-list></task-list></div>
+                    <div class="wedo-page" page="one"><task-list .team_state=${this.team_state}></task-list></div>
                     <div class="wedo-page" page="two"></div>
                     <div class="wedo-page" page="three"></div>
                   </iron-pages>
@@ -129,6 +132,7 @@ export class WeDo extends LitElement {
   protected updated(_changedProperties: Map<string | number | symbol, unknown>): void {
     if (_changedProperties.has('selected_team_uuid') && this.selected_team_uuid.length > 0) {
       api.teamState(this.selected_team_uuid).then((resp) => {
+        this.team_state = resp;
         console.log(resp);
       });
     }

@@ -241,7 +241,7 @@ func userInTeam(user *OrgUser, team *Team) error {
 
 func teamsForOrgUser(org_user *OrgUser) (TeamList, error) {
 	teams_user := TeamUserList{}
-	err := DB.postgre.Select(&teams_user, DB.QueriesRawMap["teams-user-by-user"], org_user.Index)
+	err := DB.postgre.Select(&teams_user, DB.QueriesRawMap["teams-user-by-user-index"], org_user.Index)
 	if err != nil {
 		Log.Error("teamsForOrgUser: " + err.Error())
 		return TeamList{}, err
@@ -309,7 +309,19 @@ func orgUserByIndex(user_index uint64) (*OrgUser, error) {
 func teamStateForOrgUserTeam(team *Team) (TeamState, error) {
 	team_state := TeamState{TeamUuid: team.Uuid}
 
-	err := DB.postgre.Select(&team_state.TeamUsers, DB.QueriesRawMap["team-users-by-team-index"], team.Index)
+	err := DB.postgre.Select(&team_state.TeamProjects, DB.QueriesRawMap["projects-by-team-index"], team.Index)
+	if err != nil {
+		Log.Error("teamStateForOrgUserTeam: " + err.Error())
+		return TeamState{}, err
+	}
+
+	err = DB.postgre.Select(&team_state.TeamTasks, DB.QueriesRawMap["tasks-by-team-index"], team.Index)
+	if err != nil {
+		Log.Error("teamStateForOrgUserTeam: " + err.Error())
+		return TeamState{}, err
+	}
+
+	err = DB.postgre.Select(&team_state.TeamUsers, DB.QueriesRawMap["team-users-by-team-index"], team.Index)
 	if err != nil {
 		Log.Error("teamStateForOrgUserTeam: " + err.Error())
 		return TeamState{}, err

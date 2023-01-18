@@ -1,14 +1,40 @@
 package main
 
-import "net/http"
+import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+)
 
 func UpgradeRequest(r *http.Request) *Request {
-	return &Request{r}
+	return &Request{Base: r}
 }
 
 func (r *Request) QueryOrDefault(key, _default string) string {
-	if value := r.URL.Query().Get(key); len(value) > 0 {
+	if value := r.Base.URL.Query().Get(key); len(value) > 0 {
 		return value
 	}
 	return _default
+}
+
+func (r *Request) ReadBody() ([]byte, error) {
+	if len(r.body) == 0 {
+		var err error
+		r.body, err = ioutil.ReadAll(r.Base.Body)
+		r.Base.Body.Close()
+		return r.body, err
+	}
+	return r.body, nil
+}
+
+func (r *Request) ReadBodyJSON(dest interface{}) error {
+	body, err := r.ReadBody()
+	if err != nil {
+		return err
+	}
+	if len(body) == 0 {
+		return fmt.Errorf("Body of %q is empty", r.Base.URL.Path)
+	}
+	return json.Unmarshal(body, dest)
 }

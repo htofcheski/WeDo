@@ -20,7 +20,7 @@ var (
 func initSessionManager() {
 	sessionManager = scs.New()
 	sessionManager.Lifetime = 24 * time.Hour
-	sessionManager.IdleTimeout = 20 * time.Minute
+	sessionManager.IdleTimeout = 60 * time.Minute
 	sessionManager.Cookie.HttpOnly = true
 }
 

@@ -44,6 +44,9 @@ export class LeftPanel extends LitElement {
     { uuid: '555555', name: 'test 32', updated: '1666887627', status: 0 },
   ];
 
+  @property({ attribute: false })
+  team_state: any = undefined;
+
   static styles = all.concat(css`
     :host {
       display: flex;
@@ -55,7 +58,7 @@ export class LeftPanel extends LitElement {
       max-height: 100%;
       margin: 0;
       padding: 0;
-      overflow: hidden;
+      overflow-y: auto;
       background: white;
     }
     .main {
@@ -78,7 +81,7 @@ export class LeftPanel extends LitElement {
       align-self: center;
     }
     .container {
-      margin-top: 2rem;
+      margin-top: 1.5rem;
     }
     .container[first] {
       margin-top: 0.5rem;
@@ -106,8 +109,9 @@ export class LeftPanel extends LitElement {
     }
     .expanded-part {
       min-height: 10rem;
+      height: 20rem;
       background: white;
-      margin-top: 1rem;
+      margin-top: 1.5rem;
       box-shadow: rgba(149, 157, 165, 0.2) 0px 8px 24px;
       border-radius: 0.8rem;
       overflow-y: scroll;
@@ -160,57 +164,65 @@ export class LeftPanel extends LitElement {
       </div>
       <hr style="margin-top: 0;" class="hr-style" />
 
-      <div class="layout vertical container" ?first=${true}>
-        <div class="layout horizontal justified project-summary">
-          <div class="flex" style="flex: 0.08;"></div>
-          <div
-            class="expand-project unselectable"
-            @click=${() => {
-              let elem = this.shadowRoot.getElementById('project-uuid');
-              if (elem) {
-                if (elem.hasAttribute('hidden')) {
-                  elem.removeAttribute('hidden');
-                } else {
-                  elem.setAttribute('hidden', 'true');
-                }
-              }
+      ${this.team_state?.team_projects?.map((project, index) => {
+        return html`
+          <div class="layout vertical container" ?first=${index === 0}>
+            <div class="layout horizontal justified project-summary">
+              <div class="flex" style="flex: 0.08;"></div>
+              <div
+                class="expand-project unselectable"
+                @click=${() => {
+                  let elem = this.shadowRoot.getElementById(project.uuid);
+                  if (elem) {
+                    if (elem.hasAttribute('hidden')) {
+                      elem.removeAttribute('hidden');
+                    } else {
+                      elem.setAttribute('hidden', 'true');
+                    }
+                  }
 
-              console.log('expanding.');
-            }}
-          >
-            <iron-icon style="color: #333;width: 4rem; height: 4rem;" icon="hardware:keyboard-arrow-down"></iron-icon>
-          </div>
-          <div>
-            <div class="layout vertical">
-              <span style="font-size: 1.1rem; font-weight: 500;">Project Name</span><span>project desc</span>
+                  console.log('expanding.');
+                }}
+              >
+                <iron-icon
+                  style="color: #333;width: 4rem; height: 4rem;"
+                  icon="hardware:keyboard-arrow-down"
+                ></iron-icon>
+              </div>
+              <div>
+                <div class="layout vertical">
+                  <span style="font-size: 1.1rem; font-weight: 500;">${project.name}</span
+                  ><span>${project.description}</span>
+                </div>
+              </div>
+              <div class="flex"></div>
+              <div>Icons</div>
+              <div class="flex"></div>
+              <div class="layout vertical progress">
+                <div class="layout horizontal justified" style="margin-bottom: 0.5rem;">
+                  <span>Progress</span>
+                  <span>80%</span>
+                </div>
+                <div><paper-progress value="80" min="0" max="100" class="red"></paper-progress></div>
+              </div>
+              <div class="flex" style="flex: 0.08;"></div>
+            </div>
+            <div id=${project.uuid} hidden class="layout vertical justified expanded-part">
+              ${this.tasks.map((task) => {
+                return html`<div class="layout horizontal task-item">
+                  <div
+                    class="kocka-status"
+                    ?open=${task.status === 0}
+                    ?active=${task.status === 1}
+                    ?done=${task.status === 2}
+                  ></div>
+                  ${task.name}
+                </div>`;
+              })}
             </div>
           </div>
-          <div class="flex"></div>
-          <div>Icons</div>
-          <div class="flex"></div>
-          <div class="layout vertical progress">
-            <div class="layout horizontal justified" style="margin-bottom: 0.5rem;">
-              <span>Progress</span>
-              <span>80%</span>
-            </div>
-            <div><paper-progress value="80" min="0" max="100" class="red"></paper-progress></div>
-          </div>
-          <div class="flex" style="flex: 0.08;"></div>
-        </div>
-      </div>
-      <div id="project-uuid" hidden class="layout vertical justified expanded-part scroll-style">
-        ${this.tasks.map((task) => {
-          return html`<div class="layout horizontal task-item">
-            <div
-              class="kocka-status"
-              ?open=${task.status === 0}
-              ?active=${task.status === 1}
-              ?done=${task.status === 2}
-            ></div>
-            ${task.name}
-          </div>`;
-        })}
-      </div>
+        `;
+      })}
     </div>`;
   }
 }

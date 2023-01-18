@@ -3,8 +3,10 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/darahayes/go-boom"
@@ -39,6 +41,8 @@ func RunHTTP() error {
 	router.HandleFunc("/api/v1/logout", logoutUser).Methods("GET")
 
 	router.HandleFunc("/api/v1/team-state", teamState).Methods("GET")
+	router.HandleFunc("/api/v1/create-project", createProject).Methods("POST")
+	router.HandleFunc("/api/v1/create-task", createTask).Methods("POST")
 
 	ServeStatic(router, "../client")
 
@@ -390,6 +394,84 @@ func teamState(w http.ResponseWriter, r *http.Request) {
 
 	team_state, _ := teamStateForOrgUserTeam(team)
 	writeJSONResponse(w, team_state, http.StatusOK)
+}
+
+func createProject(w http.ResponseWriter, r *http.Request) {
+	r_upgraded := UpgradeRequest(r)
+	req := CreateProjectReq{}
+	if err := r_upgraded.ReadBodyJSON(&req); err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	team := &Team{}
+	err := DB.postgre.Get(team, DB.QueriesRawMap["team-by-uuid"], _uuid.FromStringOrNil(req.TeamUuid))
+	if err != nil {
+		boom.Internal(w, err.Error())
+		Log.Error("createProject: " + err.Error())
+		return
+	}
+	if !team.IsValid() {
+		msg := "team is invalid"
+		boom.Internal(w, msg)
+		Log.Error("createProject: " + msg)
+		return
+	}
+
+	uuid := _uuid.NewV4()
+	now := time.Now().UTC()
+	test := ""
+	if len(req.TasksUuids) > 0 {
+		test = strings.Join(req.TasksUuids[:], ",")
+	}
+
+	_, err = DB.Queries.Exec(DB.postgre, "create-project", uuid, team.Index, test, req.Name, req.Description, now, now)
+	if err != nil {
+		boom.Internal(w, err.Error())
+		Log.Error("createProject: " + err.Error())
+		return
+	}
+
+	writeJSONResponse(w, nil, http.StatusOK)
+}
+
+func createTask(w http.ResponseWriter, r *http.Request) {
+	r_upgraded := UpgradeRequest(r)
+	req := CreateTaskReq{}
+	if err := r_upgraded.ReadBodyJSON(&req); err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	team := &Team{}
+	err := DB.postgre.Get(team, DB.QueriesRawMap["team-by-uuid"], _uuid.FromStringOrNil(req.TeamUuid))
+	if err != nil {
+		boom.Internal(w, err.Error())
+		Log.Error("createTask: " + err.Error())
+		return
+	}
+	if !team.IsValid() {
+		msg := "team is invalid"
+		boom.Internal(w, msg)
+		Log.Error("createTask: " + msg)
+		return
+	}
+
+	uuid := _uuid.NewV4()
+	now := time.Now().UTC()
+	test := ""
+	if len(req.AssignedUsersUuids) > 0 {
+		test = strings.Join(req.AssignedUsersUuids[:], ",")
+	}
+
+	_, err = DB.Queries.Exec(DB.postgre, "create-task", uuid, team.Index, test, req.Name, req.Description, req.Goal, now, now, 1)
+	if err != nil {
+		boom.Internal(w, err.Error())
+		Log.Error("createTask: " + err.Error())
+		return
+	}
+
+	writeJSONResponse(w, nil, http.StatusOK)
 }
 
 func writeJSONResponse(w http.ResponseWriter, data interface{}, status int) {
