@@ -1,4 +1,4 @@
-import { CreateProjectReq, CreateTaskReq } from './types';
+import { CreateProjectReq, CreateTaskReq, TeamState } from './types';
 
 const json_headers = Object.assign(
   {},
@@ -43,7 +43,7 @@ export const api = {
       headers: json_headers,
     }).then(jsonResponse);
   },
-  teamState(team_uuid: string): Promise<any> {
+  teamState(team_uuid: string): Promise<TeamState> {
     return fetch(`/api/v1/team-state${this.query({ team_uuid: team_uuid })}`, { headers: json_headers }).then(
       jsonResponse
     );

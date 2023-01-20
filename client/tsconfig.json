@@ -2,11 +2,11 @@
   "compilerOptions": {
     "experimentalDecorators": true,
     "allowJs": true,
-    "target": "es2015",
+    "target": "es2017",
     "module": "commonjs",
     "moduleResolution": "node",
     "lib": [
-      "es2015",
+      "es2017",
       "dom"
     ],
     "sourceMap": true

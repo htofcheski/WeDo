@@ -12,6 +12,7 @@ import '@polymer/paper-tabs/paper-tab';
 import '@polymer/paper-tabs/paper-tabs';
 
 import moment = require('moment');
+import { TeamTask } from '../types';
 
 export interface CHK_TEAM_USER {
   uuid?: string;
@@ -46,6 +47,9 @@ export class LeftPanel extends LitElement {
 
   @property({ attribute: false })
   team_state: any = undefined;
+
+  @property({ attribute: false })
+  project_to_tasks_map: Map<string, TeamTask[]> = new Map();
 
   static styles = all.concat(css`
     :host {
@@ -86,6 +90,9 @@ export class LeftPanel extends LitElement {
     .container[first] {
       margin-top: 0.5rem;
     }
+    .container[last] {
+      padding-bottom: 1.5rem;
+    }
     .expand-project {
       margin-right: 1rem;
       border-radius: 1rem;
@@ -108,8 +115,6 @@ export class LeftPanel extends LitElement {
       color: #333;
     }
     .expanded-part {
-      min-height: 10rem;
-      height: 20rem;
       background: white;
       margin-top: 1.5rem;
       box-shadow: rgba(149, 157, 165, 0.2) 0px 8px 24px;
@@ -120,9 +125,7 @@ export class LeftPanel extends LitElement {
       font-size: 1.2rem;
       font-weight: 600;
       color: rgb(51, 51, 51);
-      margin: 0 0.2rem;
-      margin-top: 1rem;
-      margin-bottom: 1.5rem;
+      margin: 1.5rem 0.2rem;
     }
     .paper-tabs {
       --paper-tabs-selection-bar-color: var(--theme-primary);
@@ -166,7 +169,11 @@ export class LeftPanel extends LitElement {
 
       ${this.team_state?.team_projects?.map((project, index) => {
         return html`
-          <div class="layout vertical container" ?first=${index === 0}>
+          <div
+            class="layout vertical container"
+            ?first=${index === 0}
+            ?last=${index === this.team_state?.team_projects?.length - 1}
+          >
             <div class="layout horizontal justified project-summary">
               <div class="flex" style="flex: 0.08;"></div>
               <div
@@ -207,18 +214,31 @@ export class LeftPanel extends LitElement {
               </div>
               <div class="flex" style="flex: 0.08;"></div>
             </div>
-            <div id=${project.uuid} hidden class="layout vertical justified expanded-part">
-              ${this.tasks.map((task) => {
-                return html`<div class="layout horizontal task-item">
-                  <div
-                    class="kocka-status"
-                    ?open=${task.status === 0}
-                    ?active=${task.status === 1}
-                    ?done=${task.status === 2}
-                  ></div>
-                  ${task.name}
-                </div>`;
-              })}
+            <div
+              id=${project.uuid}
+              hidden
+              class="layout vertical justified expanded-part"
+              style=${'height: ' +
+              (
+                (this.project_to_tasks_map?.get(project.uuid)?.length > 0
+                  ? this.project_to_tasks_map?.get(project.uuid)?.length
+                  : 1) * 4.5
+              ).toString() +
+              'rem;'}
+            >
+              ${this.project_to_tasks_map?.get(project.uuid)?.length > 0
+                ? this.project_to_tasks_map?.get(project.uuid)?.map((task) => {
+                    return html`<div class="layout horizontal task-item">
+                      <div
+                        class="kocka-status"
+                        ?open=${task.state === 0}
+                        ?active=${task.state === 1}
+                        ?done=${task.state === 2}
+                      ></div>
+                      ${task.name}
+                    </div>`;
+                  })
+                : html`<div class="layout horizontal task-item">No tasks here!</div>`}
             </div>
           </div>
         `;
