@@ -28,17 +28,21 @@
     "@polymer/iron-icons": "^3.0.1",
     "@polymer/iron-image": "^3.0.2",
     "@polymer/iron-pages": "^3.0.1",
-    "@polymer/paper-progress": "^3.0.1",
-    "@polymer/paper-tabs": "^3.1.0",
     "@polymer/paper-icon-button": "^3.0.2",
+    "@polymer/paper-progress": "^3.0.1",
     "@polymer/paper-spinner": "^3.0.2",
-    "@vaadin/vaadin-combo-box": "^5.1.1",
+    "@polymer/paper-tabs": "^3.1.0",
+    "@polymer/paper-toast": "^3.0.1",
     "@vaadin/vaadin-button": "^2.3.0",
+    "@vaadin/vaadin-combo-box": "^5.1.1",
+    "@vaadin/vaadin-dialog": "^2.5.2",
+    "@vaadin/vaadin-text-field": "^2.6.0",
+    "multiselect-combo-box": "^2.2.0",
     "lit-element": "^2.5.1",
     "lit-html": "^1.4.1",
-    "moment": "^2.29.1",
-    "randomcolor": "^0.5.4",
     "localforage": "^1.7.3",
-    "mitt": "^3.0.0"
+    "mitt": "^3.0.0",
+    "moment": "^2.29.1",
+    "randomcolor": "^0.5.4"
   }
 }

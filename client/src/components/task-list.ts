@@ -6,10 +6,11 @@ import randomColor = require('randomcolor');
 import '@polymer/iron-image/iron-image';
 import '@polymer/iron-icon/iron-icon';
 import '@polymer/iron-icons/iron-icons';
-import '@polymer/iron-icons/hardware-icons';
 import '@polymer/paper-progress/paper-progress';
 import '@polymer/paper-tabs/paper-tab';
 import '@polymer/paper-tabs/paper-tabs';
+
+import '@vaadin/vaadin-button/vaadin-button';
 
 import moment = require('moment');
 import { TeamTask } from '../types';
@@ -50,6 +51,15 @@ export class LeftPanel extends LitElement {
 
   @property({ attribute: false })
   project_to_tasks_map: Map<string, TeamTask[]> = new Map();
+
+  @property({ attribute: false })
+  team_tasks_no_project: TeamTask[] = [];
+
+  @property({ attribute: false })
+  is_expanded_map: Map<string, boolean> = new Map();
+
+  @property({ attribute: false })
+  hide_team_tasks_no_project: boolean = false;
 
   static styles = all.concat(css`
     :host {
@@ -120,6 +130,7 @@ export class LeftPanel extends LitElement {
       box-shadow: rgba(149, 157, 165, 0.2) 0px 8px 24px;
       border-radius: 0.8rem;
       overflow-y: scroll;
+      max-height: 20rem;
     }
     .header {
       font-size: 1.2rem;
@@ -151,6 +162,18 @@ export class LeftPanel extends LitElement {
     .kocka-status[done] {
       background: green;
     }
+    .add-button {
+      height: 100%;
+      justify-content: center;
+      padding: 0 1.2rem;
+      border-radius: 0 0.8rem 0.8rem 0;
+      transition: 0.3s;
+    }
+    .add-button:hover {
+      background: var(--theme-primary);
+      box-shadow: rgba(149, 157, 165, 0.2) 0px 8px 24px;
+      color: white;
+    }
   `);
 
   render() {
@@ -172,7 +195,7 @@ export class LeftPanel extends LitElement {
           <div
             class="layout vertical container"
             ?first=${index === 0}
-            ?last=${index === this.team_state?.team_projects?.length - 1}
+            ?last=${index === this.team_state?.team_projects?.length - 1 && this.team_tasks_no_project.length === 0}
           >
             <div class="layout horizontal justified project-summary">
               <div class="flex" style="flex: 0.08;"></div>
@@ -183,22 +206,35 @@ export class LeftPanel extends LitElement {
                   if (elem) {
                     if (elem.hasAttribute('hidden')) {
                       elem.removeAttribute('hidden');
+                      this.is_expanded_map.set(project.uuid, true);
                     } else {
                       elem.setAttribute('hidden', 'true');
+                      this.is_expanded_map.set(project.uuid, false);
                     }
                   }
 
+                  this.requestUpdate('is_expanded_map');
+                  console.log(this.is_expanded_map);
                   console.log('expanding.');
                 }}
               >
                 <iron-icon
                   style="color: #333;width: 4rem; height: 4rem;"
-                  icon="hardware:keyboard-arrow-down"
+                  icon=${this.is_expanded_map.get(project.uuid) ? 'icons:arrow-drop-up' : 'icons:arrow-drop-down'}
                 ></iron-icon>
               </div>
               <div>
                 <div class="layout vertical">
-                  <span style="font-size: 1.1rem; font-weight: 500;">${project.name}</span
+                  <span style="font-size: 1.1rem; font-weight: 500;"
+                    >${project.name}<vaadin-button
+                      @click=${() => {
+                        this.dispatchEvent(
+                          new CustomEvent('test', { detail: { type: 'update-project', project_uuid: project.uuid } })
+                        );
+                      }}
+                      theme="primary"
+                      >EDIT</vaadin-button
+                    ></span
                   ><span>${project.description}</span>
                 </div>
               </div>
@@ -212,7 +248,8 @@ export class LeftPanel extends LitElement {
                 </div>
                 <div><paper-progress value="80" min="0" max="100" class="red"></paper-progress></div>
               </div>
-              <div class="flex" style="flex: 0.08;"></div>
+              <div class="flex" style="flex: 0.16;"></div>
+              <div class="layout vertical add-button"><iron-icon icon="icons:add"></iron-icon></div>
             </div>
             <div
               id=${project.uuid}
@@ -238,11 +275,53 @@ export class LeftPanel extends LitElement {
                       ${task.name}
                     </div>`;
                   })
-                : html`<div class="layout horizontal task-item">No tasks here!</div>`}
+                : html`<div class="layout horizontal task-item" style="font-weight: 400;">No tasks here!</div>`}
             </div>
           </div>
         `;
       })}
-    </div>`;
+      ${this.team_tasks_no_project?.length > 0
+        ? html` <div class="layout vertical container" last>
+            <div class="layout horizontal justified" style="margin: 0 1rem;">
+              <div>TITLE</div>
+              <div>
+                <paper-icon-button
+                  icon="add-circle"
+                  style="color: var(--theme-primary);"
+                  @click=${() => {
+                    this.dispatchEvent(new CustomEvent('test', { detail: { type: 'create-project' } }));
+                  }}
+                ></paper-icon-button>
+              </div>
+              <div>
+                <paper-icon-button
+                  icon="delete"
+                  style="color: var(--theme-primary);"
+                  @click=${() => {
+                    this.hide_team_tasks_no_project = !this.hide_team_tasks_no_project;
+                  }}
+                ></paper-icon-button>
+              </div>
+            </div>
+            <div
+              ?hidden=${this.hide_team_tasks_no_project}
+              class="layout vertical justified expanded-part"
+              style=${'height: ' + (this.team_tasks_no_project.length * 4.5).toString() + 'rem;'}
+            >
+              ${this.team_tasks_no_project.map((task) => {
+                return html`<div class="layout horizontal task-item">
+                  <div
+                    class="kocka-status"
+                    ?open=${task.state === 0}
+                    ?active=${task.state === 1}
+                    ?done=${task.state === 2}
+                  ></div>
+                  ${task.name}
+                </div>`;
+              })}
+            </div>
+          </div>`
+        : html``}
+    </div> `;
   }
 }

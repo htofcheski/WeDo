@@ -338,19 +338,20 @@ export const flexbox_styles = css`
 export const shared = css`
   :host {
     --theme-primary: #7771eb;
+    --theme-error: #de5246;
   }
-  :host ::-webkit-scrollbar {
+  ::-webkit-scrollbar {
     width: 10px;
   }
-  :host ::-webkit-scrollbar-track {
+  ::-webkit-scrollbar-track {
     box-shadow: inset 0 0 10px whitesmoke;
     border-radius: 50px;
   }
-  :host ::-webkit-scrollbar-thumb {
+  ::-webkit-scrollbar-thumb {
     background: silver;
     border-radius: 50px;
   }
-  :host ::-webkit-scrollbar-thumb:hover {
+  ::-webkit-scrollbar-thumb:hover {
     background: var(--theme-primary);
   }
 

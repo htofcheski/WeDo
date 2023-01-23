@@ -12,6 +12,14 @@ export interface CreateProjectReq {
   description?: string;
 }
 
+export interface UpdateProjectReq {
+  project_uuid: string;
+  team_uuid: string;
+  tasks_uuids?: string[];
+  name: string;
+  description?: string;
+}
+
 export interface CreateTaskReq {
   team_uuid: string;
   assigned_users_uuids?: string[];
