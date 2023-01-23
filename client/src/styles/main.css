@@ -1,13 +1,18 @@
 html {
     font-size: 16px;
     height: 100%;
-  }
+}
   
-  body {
+body {
     margin: 0;
     padding: 0;
     background: whitesmoke;
     height: 100%;
   
     font-family: 'IBM Plex Sans', sans-serif;
-  }
+}
+
+:root {
+    --theme-primary: #7771eb;
+    --theme-error: #cc0000;
+}

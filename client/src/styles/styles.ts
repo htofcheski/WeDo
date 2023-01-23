@@ -336,10 +336,6 @@ export const flexbox_styles = css`
 `;
 
 export const shared = css`
-  :host {
-    --theme-primary: #7771eb;
-    --theme-error: #de5246;
-  }
   ::-webkit-scrollbar {
     width: 10px;
   }

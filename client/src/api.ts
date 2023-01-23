@@ -1,4 +1,4 @@
-import { CreateProjectReq, CreateTaskReq, TeamState } from './types';
+import { CreateProjectReq, CreateTaskReq, TeamState, UpdateProjectReq } from './types';
 
 const json_headers = Object.assign(
   {},
@@ -50,6 +50,13 @@ export const api = {
   },
   createProject(req: CreateProjectReq): Promise<any> {
     return fetch('/api/v1/create-project', {
+      headers: json_headers,
+      method: 'POST',
+      body: JSON.stringify(req),
+    }).then(jsonResponse);
+  },
+  updateProject(req: UpdateProjectReq): Promise<any> {
+    return fetch('/api/v1/update-project', {
       headers: json_headers,
       method: 'POST',
       body: JSON.stringify(req),

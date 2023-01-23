@@ -1,10 +1,11 @@
 import { LitElement, html, customElement, property, TemplateResult, css } from 'lit-element';
 import { database } from './database';
-import { CreateProjectReq, OrgUser, Team, TeamProject, TeamState, TeamTask, TeamUser } from './types';
+import { CreateProjectReq, OrgUser, Team, TeamProject, TeamState, TeamTask, TeamUser, UpdateProjectReq } from './types';
 
 import '@polymer/iron-pages/iron-pages';
 import '@polymer/paper-spinner/paper-spinner';
 import '@polymer/paper-toast/paper-toast';
+import '@polymer/paper-icon-button/paper-icon-button';
 
 import '@vaadin/vaadin-combo-box/vaadin-combo-box';
 import '@vaadin/vaadin-dialog/vaadin-dialog';
@@ -74,7 +75,18 @@ export class WeDo extends LitElement {
   create_project_req: CreateProjectReq = undefined;
 
   @property({ attribute: false })
-  opened: boolean = false;
+  update_project_req: UpdateProjectReq = undefined;
+
+  @property({ attribute: false })
+  dialog_opened: boolean = false;
+
+  @property()
+  page: Pages = 'one';
+
+  @property()
+  name = 'Hristijan Tofcheski';
+
+  private dialog: any = undefined;
 
   static styles = all.concat(css`
     .wedo-page,
@@ -103,23 +115,17 @@ export class WeDo extends LitElement {
     }
     #toast {
       z-index: 200000000000;
+      font-weight: 500;
+      font-size: 1.1rem;
     }
   `);
-
-  @property()
-  page: Pages = 'one';
-
-  @property()
-  name = 'Hristijan Tofcheski';
-
-  private dialog: any = undefined;
 
   render() {
     return this.loading
       ? html`<div class="center-div"><paper-spinner class="loading" active></paper-spinner></div>`
       : this.selected_team_uuid.length > 0
       ? html`
-          <dom-module id="purple" theme-for="vaadin-*-*">
+          <dom-module id="purple" theme-for="vaadin-*-* multiselect-combo-box">
             <template>
               <style>
                 :host([readonly][theme~='purple']) [part='label'] {
@@ -148,7 +154,14 @@ export class WeDo extends LitElement {
           <div class="layout horizontal" style="height: 100%;">
             <left-panel></left-panel>
             <div class="layout vertical" style="width: 100%;">
-              <top-header></top-header>
+              <top-header
+                @openDialog=${(e) => {
+                  this.dialog_type = e.detail.type;
+                  if (this.dialog_type === 'create-project') {
+                    this.openDialog(this.projectDialogTemplate());
+                  }
+                }}
+              ></top-header>
               <div class="layout horizontal" style="width: 100%; height: 90%">
                 <div
                   class="layout horizontal"
@@ -162,7 +175,12 @@ export class WeDo extends LitElement {
                         .team_state=${this.team_state}
                         @test=${(e) => {
                           this.dialog_type = e.detail.type;
-                          this.open(this.createProjectDialogTemplate());
+                          if (this.dialog_type === 'update-project') {
+                            let project = this.team_projects.find((project) => project.uuid === e.detail.project_uuid);
+                            if (project) {
+                              this.openDialog(this.projectDialogTemplate(project));
+                            }
+                          }
                         }}
                       ></task-list>
                     </div>
@@ -212,7 +230,9 @@ export class WeDo extends LitElement {
 
   protected updated(_changedProperties: Map<string | number | symbol, unknown>): void {
     if (_changedProperties.has('selected_team_uuid') && this.selected_team_uuid.length > 0) {
-      this.resetCreateProjectReq(true);
+      this.resetCreateProjectReq();
+      this.resetUpdateProjectReq();
+
       api.teamState(this.selected_team_uuid).then((resp) => {
         this.team_state = this.rebuildTeamState(resp);
         this.team_users = [].concat(this.team_state.team_users);
@@ -279,7 +299,7 @@ export class WeDo extends LitElement {
       let project_to_assigned_users_map: Map<string, TeamUser[]> = new Map();
 
       this.team_state.team_projects.forEach((project) => {
-        let project_tasks_uuids = project.tasks_uuids.length > 0 ? project.tasks_uuids.split(',') : [];
+        let project_tasks_uuids = project.tasks_uuids?.length > 0 ? project.tasks_uuids.split(',') : [];
         let project_tasks_arr: TeamTask[] = [];
         let project_team_users_arr: TeamUser[] = [];
 
@@ -295,7 +315,7 @@ export class WeDo extends LitElement {
 
               if (this.team_state?.team_users) {
                 let project_assigned_users_uuids =
-                  task.assigned_users_uuids.length > 0 ? task.assigned_users_uuids.split(',') : [];
+                  task.assigned_users_uuids?.length > 0 ? task.assigned_users_uuids.split(',') : [];
 
                 for (let j = 0; j < project_assigned_users_uuids.length; j++) {
                   let team_user = this.team_state.team_users.find(
@@ -342,8 +362,11 @@ export class WeDo extends LitElement {
     }
   }
 
-  updateProjectDialogTemplate(): TemplateResult {
+  projectDialogTemplate(existing?: TeamProject): TemplateResult {
+    const is_update = existing && existing?.uuid?.length > 0;
+
     let tasks = [];
+    let selected_tasks = [];
     this.team_tasks_no_project.forEach((task) => {
       tasks = [
         ...tasks,
@@ -354,170 +377,195 @@ export class WeDo extends LitElement {
       ];
     });
 
-    let test = html`<div class="layout vertical center">
-      <div class="layout horizontal" style="font-weight: 500; font-size: 1.1rem;">Update Project</div>
-      <div class="layout horizontal">
-        <vaadin-text-field
-          label="Name"
-          theme="purple"
-          @value-changed=${(e: any) => {
-            if (this.create_project_req) {
-              this.create_project_req.name = e.detail.value;
-            }
-          }}
-        ></vaadin-text-field>
-      </div>
-      <div class="layout horizontal">
-        <vaadin-text-field
-          label="Description"
-          theme="purple"
-          @value-changed=${(e: any) => {
-            if (this.create_project_req) {
-              this.create_project_req.description = e.detail.value;
-            }
-          }}
-        ></vaadin-text-field>
-      </div>
-      <div class="layout horizontal">
-        <multiselect-combo-box
-          theme="purple"
-          compact-mode
-          clear-button-visible
-          @selected-items-changed=${(e) => {
-            if (this.create_project_req) {
-              this.create_project_req.tasks_uuids = [].concat(
-                e.detail.value.map((entry) => {
-                  return entry['value'];
-                })
-              );
-            }
-          }}
-          label="Tasks"
-          item-value-path="value"
-          item-id-path="value"
-          item-label-path="label"
-          .selectedItems=${[]}
-          .items=${tasks}
-        ></multiselect-combo-box>
-      </div>
-      <div class="layout horizontal">
-        <vaadin-button
-          @click=${() => {
-            if (this.isCreateProjectReqValid()) {
-              api.createProject(this.create_project_req).then((resp) => {
-                const dialog = this.shadowRoot.getElementById('dialog');
-                console.log(dialog);
+    if (is_update) {
+      this.update_project_req.project_uuid = existing.uuid;
 
-                if (dialog) {
-                  //@ts-ignore
-                  dialog.opened = false;
+      let selected_tasks_uuids = existing.tasks_uuids?.length > 0 ? existing.tasks_uuids.split(',') : [];
+
+      // find selected tasks and append them to selectable task array.
+      if (selected_tasks_uuids.length > 0) {
+        this.team_tasks.forEach((task) => {
+          if (selected_tasks_uuids.includes(task.uuid)) {
+            selected_tasks = [
+              ...selected_tasks,
+              {
+                label: task.name,
+                value: task.uuid,
+              },
+            ];
+
+            tasks = [
+              ...tasks,
+              {
+                label: task.name,
+                value: task.uuid,
+              },
+            ];
+          }
+        });
+      }
+    }
+
+    return html`<!-- Don't remove style tag, used to pass styles from main component -->
+      <style id="dialog-styles">
+        .dialog-header {
+          font-weight: 500;
+          font-size: 1.1rem;
+          min-width: 20rem;
+          align-items: center;
+        }
+        .max-width {
+          width: 100%;
+        }
+        .button-row {
+          padding-top: 3rem;
+        }
+        .button-row > .submit {
+          width: 50%;
+          background: var(--theme-primary);
+          color: white;
+        }
+      </style>
+      <div class="layout vertical center">
+        <div class="layout horizontal justified dialog-header">
+          <div>${is_update ? 'Update Project' : 'Create Project'}</div>
+          <div class="flex"></div>
+          <div>
+            <paper-icon-button
+              icon="close"
+              @click=${() => {
+                this.closeDialog();
+                if (is_update) {
+                  this.resetUpdateProjectReq();
+                } else {
+                  this.resetCreateProjectReq();
                 }
-                this.show_toast('success', 'project created.');
-              });
-            } else {
-              this.show_toast('error', 'invalid');
-            }
-          }}
-          >Create</vaadin-button
-        ><vaadin-button
-          @click=${() => {
-            this.close();
-          }}
-          >EXIT</vaadin-button
-        >
-      </div>
-    </div>`;
-
-    return html`${test}`;
-  }
-
-  createProjectDialogTemplate(): TemplateResult {
-    let tasks = [];
-    this.team_tasks_no_project.forEach((task) => {
-      tasks = [
-        ...tasks,
-        {
-          label: task.name,
-          value: task.uuid,
-        },
-      ];
-    });
-
-    let test = html`<div class="layout vertical center">
-      <div class="layout horizontal" style="font-weight: 500; font-size: 1.1rem;">Create Project</div>
-      <div class="layout horizontal">
-        <vaadin-text-field
-          label="Name"
-          theme="purple"
-          @value-changed=${(e: any) => {
-            if (this.create_project_req) {
-              this.create_project_req.name = e.detail.value;
-            }
-          }}
-        ></vaadin-text-field>
-      </div>
-      <div class="layout horizontal">
-        <vaadin-text-field
-          label="Description"
-          theme="purple"
-          @value-changed=${(e: any) => {
-            if (this.create_project_req) {
-              this.create_project_req.description = e.detail.value;
-            }
-          }}
-        ></vaadin-text-field>
-      </div>
-      <div class="layout horizontal">
-        <multiselect-combo-box
-          theme="purple"
-          compact-mode
-          clear-button-visible
-          @selected-items-changed=${(e) => {
-            if (this.create_project_req) {
-              this.create_project_req.tasks_uuids = [].concat(
-                e.detail.value.map((entry) => {
-                  return entry['value'];
-                })
-              );
-            }
-          }}
-          label="Tasks"
-          item-value-path="value"
-          item-id-path="value"
-          item-label-path="label"
-          .selectedItems=${[]}
-          .items=${tasks}
-        ></multiselect-combo-box>
-      </div>
-      <div class="layout horizontal">
-        <vaadin-button
-          @click=${() => {
-            if (this.isCreateProjectReqValid()) {
-              api.createProject(this.create_project_req).then((resp) => {
-                const dialog = this.shadowRoot.getElementById('dialog');
-                console.log(dialog);
-
-                if (dialog) {
-                  //@ts-ignore
-                  dialog.opened = false;
+              }}
+            ></paper-icon-button>
+          </div>
+        </div>
+        <div class="layout horizontal max-width">
+          <vaadin-text-field
+            required
+            class="max-width"
+            label="Name"
+            theme="purple"
+            value=${is_update ? existing?.name : ''}
+            @value-changed=${(e: any) => {
+              if (is_update) {
+                if (this.update_project_req) {
+                  this.update_project_req.name = e.detail.value;
                 }
-                this.show_toast('success', 'project created.');
-              });
-            } else {
-              this.show_toast('error', 'invalid');
-            }
-          }}
-          >Create</vaadin-button
-        ><vaadin-button
-          @click=${() => {
-            this.close();
-          }}
-          >EXIT</vaadin-button
-        >
-      </div>
-    </div>`;
-
-    return html`${test}`;
+              } else {
+                if (this.create_project_req) {
+                  this.create_project_req.name = e.detail.value;
+                }
+              }
+            }}
+          ></vaadin-text-field>
+        </div>
+        <div class="layout horizontal max-width">
+          <vaadin-text-field
+            class="max-width"
+            label="Description"
+            theme="purple"
+            value=${is_update ? existing?.description : ''}
+            @value-changed=${(e: any) => {
+              if (is_update) {
+                if (this.update_project_req) {
+                  this.update_project_req.description = e.detail.value;
+                }
+              } else {
+                if (this.create_project_req) {
+                  this.create_project_req.description = e.detail.value;
+                }
+              }
+            }}
+          ></vaadin-text-field>
+        </div>
+        <div class="layout horizontal max-width" ?hidden=${tasks.length === 0}>
+          <multiselect-combo-box
+            class="max-width"
+            compact-mode
+            clear-button-visible
+            theme="purple"
+            @selected-items-changed=${(e) => {
+              if (is_update) {
+                if (this.update_project_req) {
+                  this.update_project_req.tasks_uuids = [].concat(
+                    e.detail.value.map((entry) => {
+                      return entry['value'];
+                    })
+                  );
+                }
+              } else {
+                if (this.create_project_req) {
+                  this.create_project_req.tasks_uuids = [].concat(
+                    e.detail.value.map((entry) => {
+                      return entry['value'];
+                    })
+                  );
+                }
+              }
+            }}
+            label="Tasks"
+            item-value-path="value"
+            item-id-path="value"
+            item-label-path="label"
+            .selectedItems=${selected_tasks}
+            .items=${tasks}
+          ></multiselect-combo-box>
+        </div>
+        <div class="layout horizontal end-justified max-width button-row">
+          <vaadin-button
+            class="submit"
+            @click=${() => {
+              if (is_update) {
+                if (this.isUpdateProjectReqValid()) {
+                  api
+                    .updateProject(this.update_project_req)
+                    .then(() => {
+                      this.closeDialog();
+                      this.show_toast(
+                        'success',
+                        'Project: ' + "'" + this.create_project_req.name + "'" + ' was successfully updated.'
+                      );
+                      this.resetUpdateProjectReq();
+                    })
+                    .catch(() => {
+                      this.closeDialog();
+                      this.show_toast('error', 'Project modification failed.');
+                      this.resetUpdateProjectReq();
+                    });
+                } else {
+                  this.show_toast('error', 'Project modification failed, invalid request.');
+                }
+              } else {
+                if (this.isCreateProjectReqValid()) {
+                  api
+                    .createProject(this.create_project_req)
+                    .then(() => {
+                      this.closeDialog();
+                      this.show_toast(
+                        'success',
+                        'Project: ' + "'" + this.create_project_req.name + "'" + ' was successfully created.'
+                      );
+                      this.resetCreateProjectReq();
+                    })
+                    .catch(() => {
+                      this.closeDialog();
+                      this.show_toast('error', 'Project creation failed.');
+                      this.resetCreateProjectReq();
+                    });
+                } else {
+                  this.show_toast('error', 'Project creation failed, invalid request.');
+                }
+              }
+            }}
+            >Submit</vaadin-button
+          >
+        </div>
+      </div>`;
   }
 
   isCreateProjectReqValid(): boolean {
@@ -532,44 +580,63 @@ export class WeDo extends LitElement {
     );
   }
 
-  resetCreateProjectReq(init?: boolean) {
-    if (init) {
-      this.create_project_req = Object.assign(
-        {},
-        {
-          team_uuid: this.selected_team_uuid?.length > 0 ? this.selected_team_uuid : '',
-          tasks_uuids: [],
-          name: '',
-          description: '',
-        }
-      );
-    } else {
-      this.create_project_req.team_uuid = this.selected_team_uuid?.length > 0 ? this.selected_team_uuid : '';
-      this.create_project_req.tasks_uuids = [];
-      this.create_project_req.name = '';
-      this.create_project_req.description = '';
+  isUpdateProjectReqValid(): boolean {
+    if (!this.update_project_req) {
+      return false;
     }
+
+    return (
+      this.update_project_req?.project_uuid?.length > 0 &&
+      this.update_project_req?.team_uuid?.length > 0 &&
+      this.update_project_req?.team_uuid === this.selected_team_uuid &&
+      this.update_project_req?.name?.length > 0
+    );
+  }
+
+  resetCreateProjectReq() {
+    this.create_project_req = Object.assign(
+      {},
+      {
+        team_uuid: this.selected_team_uuid?.length > 0 ? this.selected_team_uuid : '',
+        tasks_uuids: [],
+        name: '',
+        description: '',
+      }
+    );
+  }
+
+  resetUpdateProjectReq() {
+    this.update_project_req = Object.assign(
+      {},
+      {
+        project_uuid: '',
+        team_uuid: this.selected_team_uuid?.length > 0 ? this.selected_team_uuid : '',
+        tasks_uuids: [],
+        name: '',
+        description: '',
+      }
+    );
   }
 
   show_toast(type: 'success' | 'error' | 'info', message: string, persistent?: boolean) {
-    const app: HTMLElement = document.getElementById('main-app');
-    if (app) {
+    const main_app: HTMLElement = document.getElementById('main-app');
+    if (main_app) {
       let background_color = '';
 
       switch (type) {
         case 'error':
-          background_color = getComputedStyle(app).getPropertyValue('--theme-error');
+          background_color = getComputedStyle(main_app).getPropertyValue('--theme-error');
           break;
         case 'success':
-          background_color = getComputedStyle(app).getPropertyValue('--theme-primary');
+          background_color = getComputedStyle(main_app).getPropertyValue('--theme-primary');
           break;
         default:
           background_color = '#666';
           break;
       }
-      app.style.setProperty('--paper-toast-background-color', background_color);
+      main_app.style.setProperty('--paper-toast-background-color', background_color);
 
-      const toast = app.shadowRoot.querySelector<PaperToastElement>('#toast');
+      const toast = main_app.shadowRoot.querySelector<PaperToastElement>('#toast');
       if (toast) {
         if (persistent) {
           toast.setAttribute('duration', '0');
@@ -585,31 +652,31 @@ export class WeDo extends LitElement {
     }
   }
 
-  open(template: TemplateResult) {
-    this.setOpened(true, template);
+  openDialog(template: TemplateResult) {
+    this.setDialogOpened(true, template);
   }
 
-  close() {
-    this.setOpened(false, html``);
+  closeDialog() {
+    this.setDialogOpened(false, html``);
   }
 
-  setOpened(opened: boolean, template: TemplateResult) {
-    if (this.opened === opened) {
+  setDialogOpened(opened: boolean, template: TemplateResult) {
+    if (this.dialog_opened === opened) {
       return;
     }
-    this.opened = opened;
+    this.dialog_opened = opened;
 
     const main_app = document.getElementById('main-app');
-
     if (main_app) {
-      if (this.opened && !this.dialog) {
-        main_app.setAttribute('style', 'z-index: -1; position: relative;');
+      if (this.dialog_opened && !this.dialog) {
+        main_app.style.setProperty('z-index', '-1');
+        main_app.style.setProperty('position', 'relative');
 
         this.dialog = document.createElement('vaadin-dialog') as any;
         this.dialog.id = `${this.nodeName.toLowerCase()}-${new Date().toISOString()}`;
         this.dialog.noCloseOnOutsideClick = true;
         this.dialog.noCloseOnEsc = true;
-        this.dialog.renderer = (root, dialog) => {
+        this.dialog.renderer = (root) => {
           render(template, root);
         };
 
@@ -618,6 +685,13 @@ export class WeDo extends LitElement {
         this.dialog.addEventListener(
           'opened-changed',
           (e: CustomEvent) => {
+            const overlay = window.document.body.querySelector('#overlay');
+            if (overlay) {
+              // append styles so we can use them in our dialogs.
+              let overlayShadowStylesExtended = all + overlay.querySelector('#dialog-styles').innerHTML;
+              overlay.querySelector('#dialog-styles').innerHTML = overlayShadowStylesExtended;
+            }
+
             this.dispatchEvent(
               new CustomEvent('opened-changed', {
                 detail: { opened: this.dialog.opened },
@@ -628,14 +702,15 @@ export class WeDo extends LitElement {
         );
 
         this.dialog.opened = true;
-      } else if (!this.opened && this.dialog) {
+      } else if (!this.dialog_opened && this.dialog) {
         this.dialog.addEventListener(
           'opened-changed',
           () => {
             this.dialog.remove();
             // let the animation finish
             setTimeout(() => {
-              main_app.removeAttribute('style');
+              main_app.style.removeProperty('z-index');
+              main_app.style.removeProperty('position');
             }, 200);
             this.dispatchEvent(
               new CustomEvent('opened-changed', {

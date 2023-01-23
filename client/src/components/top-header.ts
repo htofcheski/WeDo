@@ -65,16 +65,7 @@ export class TopHeader extends LitElement {
           icon="add-circle"
           style="color: var(--theme-primary);"
           @click=${() => {
-            console.log('TEST!');
-            let req = {
-              team_uuid: 'a559ca29-5f66-4f20-82f7-c8323d7a3a13',
-              name: 'Another test',
-              description: '2023 desc test',
-              goal: 'feb_goal',
-            } as CreateTaskReq;
-            api.createTask(req).then((resp) => {
-              console.log('BBB', resp);
-            });
+            this.dispatchEvent(new CustomEvent('openDialog', { detail: { type: 'create-project' } }));
           }}
         ></paper-icon-button>
       </div>
