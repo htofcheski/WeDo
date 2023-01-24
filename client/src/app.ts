@@ -18,7 +18,7 @@ import { api } from './api';
 import './components/right-panel';
 import './components/top-header';
 import './components/left-panel';
-import './components/task-list';
+import './components/project-page';
 import { render } from 'lit-html';
 import { PaperToastElement } from '@polymer/paper-toast';
 
@@ -129,10 +129,10 @@ export class WeDo extends LitElement {
             <template>
               <style>
                 :host([readonly][theme~='purple']) [part='label'] {
-                  color: #7771eb !important;
+                  color: var(--theme-primary) !important;
                 }
                 :host([theme~='purple']) [part='label']:not(:hover) {
-                  color: #7771eb !important;
+                  color: var(--theme-primary) !important;
                 }
               </style>
             </template>
@@ -169,10 +169,14 @@ export class WeDo extends LitElement {
                 >
                   <iron-pages selected=${this.page} attr-for-selected="page">
                     <div class="wedo-page" page="one">
-                      <task-list
+                      <project-page
+                        .team_users=${this.team_users}
+                        .team_to_org_user_map=${this.team_to_org_user_map}
+                        .team_projects=${this.team_projects}
                         .project_to_tasks_map=${this.project_to_tasks_map}
                         .team_tasks_no_project=${this.team_tasks_no_project}
                         .team_state=${this.team_state}
+                        .project_to_assigned_users_map=${this.project_to_assigned_users_map}
                         @test=${(e) => {
                           this.dialog_type = e.detail.type;
                           if (this.dialog_type === 'update-project') {
@@ -182,7 +186,7 @@ export class WeDo extends LitElement {
                             }
                           }
                         }}
-                      ></task-list>
+                      ></project-page>
                     </div>
                     <div class="wedo-page" page="two"></div>
                     <div class="wedo-page" page="three"></div>
@@ -362,6 +366,164 @@ export class WeDo extends LitElement {
     }
   }
 
+  show_toast(type: 'success' | 'error' | 'info', message: string, persistent?: boolean) {
+    const main_app: HTMLElement = document.getElementById('main-app');
+    if (main_app) {
+      let background_color = '';
+
+      switch (type) {
+        case 'error':
+          background_color = getComputedStyle(main_app).getPropertyValue('--theme-error');
+          break;
+        case 'success':
+          background_color = getComputedStyle(main_app).getPropertyValue('--theme-primary');
+          break;
+        default:
+          background_color = getComputedStyle(main_app).getPropertyValue('--theme-secondary');
+          break;
+      }
+      main_app.style.setProperty('--paper-toast-background-color', background_color);
+
+      const toast = main_app.shadowRoot.querySelector<PaperToastElement>('#toast');
+      if (toast) {
+        if (persistent) {
+          toast.setAttribute('duration', '0');
+          toast.querySelector('vaadin-button').removeAttribute('hidden');
+        } else {
+          toast.close();
+          toast.setAttribute('duration', '5000');
+          toast.querySelector('vaadin-button').setAttribute('hidden', '');
+        }
+
+        toast.show({ text: message });
+      }
+    }
+  }
+
+  setDialogOpened(opened: boolean, template: TemplateResult) {
+    if (this.dialog_opened === opened) {
+      return;
+    }
+    this.dialog_opened = opened;
+
+    const main_app = document.getElementById('main-app');
+    if (main_app) {
+      if (this.dialog_opened && !this.dialog) {
+        main_app.style.setProperty('z-index', '-1');
+        main_app.style.setProperty('position', 'relative');
+
+        this.dialog = document.createElement('vaadin-dialog') as any;
+        this.dialog.id = `${this.nodeName.toLowerCase()}-${new Date().toISOString()}`;
+        this.dialog.noCloseOnOutsideClick = true;
+        this.dialog.noCloseOnEsc = true;
+        this.dialog.renderer = (root) => {
+          render(template, root);
+        };
+
+        window.document.body.appendChild(this.dialog);
+
+        this.dialog.addEventListener(
+          'opened-changed',
+          (e: CustomEvent) => {
+            const overlay = window.document.body.querySelector('#overlay');
+            if (overlay) {
+              // append styles so we can use them in our dialogs.
+              let overlayShadowStylesExtended = all + overlay.querySelector('#dialog-styles').innerHTML;
+              overlay.querySelector('#dialog-styles').innerHTML = overlayShadowStylesExtended;
+            }
+
+            this.dispatchEvent(
+              new CustomEvent('opened-changed', {
+                detail: { opened: this.dialog.opened },
+              })
+            );
+          },
+          { once: true }
+        );
+
+        this.dialog.opened = true;
+      } else if (!this.dialog_opened && this.dialog) {
+        this.dialog.addEventListener(
+          'opened-changed',
+          () => {
+            this.dialog.remove();
+            // let the animation finish
+            setTimeout(() => {
+              main_app.style.removeProperty('z-index');
+              main_app.style.removeProperty('position');
+            }, 200);
+            this.dispatchEvent(
+              new CustomEvent('opened-changed', {
+                detail: { opened: this.dialog.opened },
+              })
+            );
+          },
+          { once: true }
+        );
+        this.dialog.opened = false;
+        this.dialog = undefined;
+      }
+    }
+  }
+
+  openDialog(template: TemplateResult) {
+    this.setDialogOpened(true, template);
+  }
+
+  closeDialog() {
+    this.setDialogOpened(false, html``);
+  }
+
+  isCreateProjectReqValid(): boolean {
+    if (!this.create_project_req) {
+      return false;
+    }
+
+    return (
+      this.create_project_req?.team_uuid?.length > 0 &&
+      this.create_project_req?.team_uuid === this.selected_team_uuid &&
+      this.create_project_req?.name?.length > 0
+    );
+  }
+
+  isUpdateProjectReqValid(): boolean {
+    if (!this.update_project_req) {
+      return false;
+    }
+
+    return (
+      this.update_project_req?.project_uuid?.length > 0 &&
+      this.update_project_req?.team_uuid?.length > 0 &&
+      this.update_project_req?.team_uuid === this.selected_team_uuid &&
+      this.update_project_req?.name?.length > 0
+    );
+  }
+
+  resetCreateProjectReq() {
+    this.create_project_req = Object.assign(
+      {},
+      {
+        team_uuid: this.selected_team_uuid?.length > 0 ? this.selected_team_uuid : '',
+        tasks_uuids: [],
+        name: '',
+        description: '',
+      }
+    );
+  }
+
+  resetUpdateProjectReq() {
+    this.update_project_req = Object.assign(
+      {},
+      {
+        project_uuid: '',
+        team_uuid: this.selected_team_uuid?.length > 0 ? this.selected_team_uuid : '',
+        tasks_uuids: [],
+        name: '',
+        description: '',
+      }
+    );
+  }
+
   projectDialogTemplate(existing?: TeamProject): TemplateResult {
     const is_update = existing && existing?.uuid?.length > 0;
 
@@ -420,10 +582,16 @@ export class WeDo extends LitElement {
         .button-row {
           padding-top: 3rem;
         }
-        .button-row > .submit {
-          width: 50%;
-          background: var(--theme-primary);
+        .button-row > .s-button,
+        .button-row > .c-button {
+          width: 49%;
           color: white;
+        }
+        .s-button {
+          background: var(--theme-primary);
+        }
+        .c-button {
+          background: var(--theme-secondary);
         }
       </style>
       <div class="layout vertical center">
@@ -516,9 +684,21 @@ export class WeDo extends LitElement {
             .items=${tasks}
           ></multiselect-combo-box>
         </div>
-        <div class="layout horizontal end-justified max-width button-row">
+        <div class="layout horizontal justified max-width button-row">
           <vaadin-button
-            class="submit"
+            class="c-button"
+            @click=${() => {
+              this.closeDialog();
+              if (is_update) {
+                this.resetUpdateProjectReq();
+              } else {
+                this.resetCreateProjectReq();
+              }
+            }}
+            >Cancel</vaadin-button
+          >
+          <vaadin-button
+            class="s-button"
             @click=${() => {
               if (is_update) {
                 if (this.isUpdateProjectReqValid()) {
@@ -528,7 +708,7 @@ export class WeDo extends LitElement {
                       this.closeDialog();
                       this.show_toast(
                         'success',
-                        'Project: ' + "'" + this.create_project_req.name + "'" + ' was successfully updated.'
+                        'Project: ' + "'" + this.update_project_req.name + "'" + ' was successfully updated.'
                       );
                       this.resetUpdateProjectReq();
                     })
@@ -566,163 +746,5 @@ export class WeDo extends LitElement {
           >
         </div>
       </div>`;
-  }
-
-  isCreateProjectReqValid(): boolean {
-    if (!this.create_project_req) {
-      return false;
-    }
-
-    return (
-      this.create_project_req?.team_uuid?.length > 0 &&
-      this.create_project_req?.team_uuid === this.selected_team_uuid &&
-      this.create_project_req?.name?.length > 0
-    );
-  }
-
-  isUpdateProjectReqValid(): boolean {
-    if (!this.update_project_req) {
-      return false;
-    }
-
-    return (
-      this.update_project_req?.project_uuid?.length > 0 &&
-      this.update_project_req?.team_uuid?.length > 0 &&
-      this.update_project_req?.team_uuid === this.selected_team_uuid &&
-      this.update_project_req?.name?.length > 0
-    );
-  }
-
-  resetCreateProjectReq() {
-    this.create_project_req = Object.assign(
-      {},
-      {
-        team_uuid: this.selected_team_uuid?.length > 0 ? this.selected_team_uuid : '',
-        tasks_uuids: [],
-        name: '',
-        description: '',
-      }
-    );
-  }
-
-  resetUpdateProjectReq() {
-    this.update_project_req = Object.assign(
-      {},
-      {
-        project_uuid: '',
-        team_uuid: this.selected_team_uuid?.length > 0 ? this.selected_team_uuid : '',
-        tasks_uuids: [],
-        name: '',
-        description: '',
-      }
-    );
-  }
-
-  show_toast(type: 'success' | 'error' | 'info', message: string, persistent?: boolean) {
-    const main_app: HTMLElement = document.getElementById('main-app');
-    if (main_app) {
-      let background_color = '';
-
-      switch (type) {
-        case 'error':
-          background_color = getComputedStyle(main_app).getPropertyValue('--theme-error');
-          break;
-        case 'success':
-          background_color = getComputedStyle(main_app).getPropertyValue('--theme-primary');
-          break;
-        default:
-          background_color = '#666';
-          break;
-      }
-      main_app.style.setProperty('--paper-toast-background-color', background_color);
-
-      const toast = main_app.shadowRoot.querySelector<PaperToastElement>('#toast');
-      if (toast) {
-        if (persistent) {
-          toast.setAttribute('duration', '0');
-          toast.querySelector('vaadin-button').removeAttribute('hidden');
-        } else {
-          toast.close();
-          toast.setAttribute('duration', '5000');
-          toast.querySelector('vaadin-button').setAttribute('hidden', '');
-        }
-
-        toast.show({ text: message });
-      }
-    }
-  }
-
-  openDialog(template: TemplateResult) {
-    this.setDialogOpened(true, template);
-  }
-
-  closeDialog() {
-    this.setDialogOpened(false, html``);
-  }
-
-  setDialogOpened(opened: boolean, template: TemplateResult) {
-    if (this.dialog_opened === opened) {
-      return;
-    }
-    this.dialog_opened = opened;
-
-    const main_app = document.getElementById('main-app');
-    if (main_app) {
-      if (this.dialog_opened && !this.dialog) {
-        main_app.style.setProperty('z-index', '-1');
-        main_app.style.setProperty('position', 'relative');
-
-        this.dialog = document.createElement('vaadin-dialog') as any;
-        this.dialog.id = `${this.nodeName.toLowerCase()}-${new Date().toISOString()}`;
-        this.dialog.noCloseOnOutsideClick = true;
-        this.dialog.noCloseOnEsc = true;
-        this.dialog.renderer = (root) => {
-          render(template, root);
-        };
-
-        window.document.body.appendChild(this.dialog);
-
-        this.dialog.addEventListener(
-          'opened-changed',
-          (e: CustomEvent) => {
-            const overlay = window.document.body.querySelector('#overlay');
-            if (overlay) {
-              // append styles so we can use them in our dialogs.
-              let overlayShadowStylesExtended = all + overlay.querySelector('#dialog-styles').innerHTML;
-              overlay.querySelector('#dialog-styles').innerHTML = overlayShadowStylesExtended;
-            }
-
-            this.dispatchEvent(
-              new CustomEvent('opened-changed', {
-                detail: { opened: this.dialog.opened },
-              })
-            );
-          },
-          { once: true }
-        );
-
-        this.dialog.opened = true;
-      } else if (!this.dialog_opened && this.dialog) {
-        this.dialog.addEventListener(
-          'opened-changed',
-          () => {
-            this.dialog.remove();
-            // let the animation finish
-            setTimeout(() => {
-              main_app.style.removeProperty('z-index');
-              main_app.style.removeProperty('position');
-            }, 200);
-            this.dispatchEvent(
-              new CustomEvent('opened-changed', {
-                detail: { opened: this.dialog.opened },
-              })
-            );
-          },
-          { once: true }
-        );
-        this.dialog.opened = false;
-        this.dialog = undefined;
-      }
-    }
   }
 }

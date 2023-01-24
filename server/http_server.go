@@ -42,6 +42,7 @@ func RunHTTP() error {
 
 	router.HandleFunc("/api/v1/team-state", teamState).Methods("GET")
 	router.HandleFunc("/api/v1/create-project", createProject).Methods("POST")
+	router.HandleFunc("/api/v1/update-project", updateProject).Methods("POST")
 	router.HandleFunc("/api/v1/create-task", createTask).Methods("POST")
 
 	ServeStatic(router, "../client")
@@ -429,6 +430,44 @@ func createProject(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		boom.Internal(w, err.Error())
 		Log.Error("createProject: " + err.Error())
+		return
+	}
+
+	writeJSONResponse(w, nil, http.StatusOK)
+}
+
+func updateProject(w http.ResponseWriter, r *http.Request) {
+	r_upgraded := UpgradeRequest(r)
+	req := UpdateProjectReq{}
+	if err := r_upgraded.ReadBodyJSON(&req); err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	team := &Team{}
+	err := DB.postgre.Get(team, DB.QueriesRawMap["team-by-uuid"], _uuid.FromStringOrNil(req.TeamUuid))
+	if err != nil {
+		boom.Internal(w, err.Error())
+		Log.Error("updateProject: " + err.Error())
+		return
+	}
+	if !team.IsValid() {
+		msg := "team is invalid"
+		boom.Internal(w, msg)
+		Log.Error("updateProject: " + msg)
+		return
+	}
+
+	now := time.Now().UTC()
+	test := ""
+	if len(req.TasksUuids) > 0 {
+		test = strings.Join(req.TasksUuids[:], ",")
+	}
+
+	_, err = DB.Queries.Exec(DB.postgre, "update-project", test, req.Name, req.Description, now, req.ProjectUuid, team.Index)
+	if err != nil {
+		boom.Internal(w, err.Error())
+		Log.Error("updateProject: " + err.Error())
 		return
 	}
 

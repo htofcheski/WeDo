@@ -14,5 +14,6 @@ body {
 
 :root {
     --theme-primary: #7771eb;
+    --theme-secondary: #777;
     --theme-error: #cc0000;
 }

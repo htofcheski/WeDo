@@ -49,5 +49,8 @@ SELECT index, uuid, team_index, assigned_users_uuids, name, description, goal, c
 -- name: create-project
 INSERT INTO project(uuid, team_index, tasks_uuids, name, description, created, updated) VALUES ($1, $2, $3, $4, $5, $6, $7);
 
+-- name: update-project
+UPDATE project SET tasks_uuids = $1, name = $2, description = $3, updated = $4 WHERE uuid = $5 AND team_index = $6;
+
 -- name: create-task
 INSERT INTO task(uuid, team_index, assigned_users_uuids, name, description, goal, created, updated, state) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);

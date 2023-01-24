@@ -216,6 +216,14 @@ type CreateProjectReq struct {
 	Description string   `json:"description"`
 }
 
+type UpdateProjectReq struct {
+	ProjectUuid string   `json:"project_uuid"`
+	TeamUuid    string   `json:"team_uuid"`
+	TasksUuids  []string `json:"tasks_uuids"`
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+}
+
 type CreateTaskReq struct {
 	TeamUuid           string   `json:"team_uuid"`
 	AssignedUsersUuids []string `json:"assigned_users_uuids"`

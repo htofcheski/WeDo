@@ -9,11 +9,13 @@ import '@polymer/iron-icons/iron-icons';
 import '@polymer/paper-progress/paper-progress';
 import '@polymer/paper-tabs/paper-tab';
 import '@polymer/paper-tabs/paper-tabs';
+import '@polymer/paper-icon-button/paper-icon-button';
 
 import '@vaadin/vaadin-button/vaadin-button';
 
 import moment = require('moment');
-import { TeamTask } from '../types';
+import { OrgUser, TeamProject, TeamTask, TeamUser } from '../types';
+import { ui_helpers } from '../helpers';
 
 export interface CHK_TEAM_USER {
   uuid?: string;
@@ -22,38 +24,31 @@ export interface CHK_TEAM_USER {
   email?: string;
 }
 
-@customElement('task-list')
+@customElement('project-page')
 export class LeftPanel extends LitElement {
   @property({ attribute: false })
   page_name: string = 'My Tasks';
 
   @property({ attribute: false })
-  tasks: any[] = [
-    {
-      uuid: '000999',
-      name: 'Ova e primer task sto e epten dolg u slucaj da otide na nova linija. Ajde uste malu da otide pak u nova linija',
-      updated: '1666887627',
-      status: 1,
-    },
-    { uuid: '321998', name: 'test21123', updated: '1666887627', status: 0 },
-    { uuid: '654997', name: 'test 3', updated: '1666887627', status: 1 },
-    { uuid: '987996', name: 'test 4', updated: '1666887627', status: 2 },
-    { uuid: '789995', name: 'test 5', updated: '1666887627', status: 1 },
-    { uuid: '456994', name: 'test 6', updated: '1666887627', status: 0 },
-    { uuid: '123993', name: 'test 73', updated: '1666887627', status: 0 },
-    { uuid: '111111', name: 'test 711', updated: '1666887627', status: 2 },
-    { uuid: '333333', name: 'test 72', updated: '1666887627', status: 1 },
-    { uuid: '555555', name: 'test 32', updated: '1666887627', status: 0 },
-  ];
+  team_state: any = undefined;
 
   @property({ attribute: false })
-  team_state: any = undefined;
+  team_users: TeamUser[] = [];
+
+  @property({ attribute: false })
+  team_to_org_user_map: Map<string, OrgUser> = new Map();
+
+  @property({ attribute: false })
+  team_projects: TeamProject[] = [];
 
   @property({ attribute: false })
   project_to_tasks_map: Map<string, TeamTask[]> = new Map();
 
   @property({ attribute: false })
   team_tasks_no_project: TeamTask[] = [];
+
+  @property({ attribute: false })
+  project_to_assigned_users_map: Map<string, TeamUser[]> = new Map();
 
   @property({ attribute: false })
   is_expanded_map: Map<string, boolean> = new Map();
@@ -119,10 +114,14 @@ export class LeftPanel extends LitElement {
     paper-progress.red {
       --paper-progress-active-color: var(--theme-primary);
       --paper-progress-height: 0.5rem;
+      max-width: 8rem;
     }
     .progress {
       font-weight: 500;
       color: #333;
+      min-width: 8rem;
+      max-width: 8rem;
+      width: 8rem;
     }
     .expanded-part {
       background: white;
@@ -174,6 +173,23 @@ export class LeftPanel extends LitElement {
       box-shadow: rgba(149, 157, 165, 0.2) 0px 8px 24px;
       color: white;
     }
+    .edit-project {
+      color: var(--theme-secondary);
+      opacity: 0.5;
+      margin-left: 1rem;
+      transition: 0.3s;
+    }
+    .edit-project:hover {
+      color: black;
+      opacity: 1;
+    }
+    .project-details{
+      min-width: 15rem;
+      width: 15rem;
+      max-width 15rem;
+      max-height: 7rem;
+      overflow: auto;
+    }
   `);
 
   render() {
@@ -190,12 +206,12 @@ export class LeftPanel extends LitElement {
       </div>
       <hr style="margin-top: 0;" class="hr-style" />
 
-      ${this.team_state?.team_projects?.map((project, index) => {
+      ${this.team_projects?.map((project, index) => {
         return html`
           <div
             class="layout vertical container"
             ?first=${index === 0}
-            ?last=${index === this.team_state?.team_projects?.length - 1 && this.team_tasks_no_project.length === 0}
+            ?last=${index === this.team_projects?.length - 1 && this.team_tasks_no_project.length === 0}
           >
             <div class="layout horizontal justified project-summary">
               <div class="flex" style="flex: 0.08;"></div>
@@ -224,22 +240,44 @@ export class LeftPanel extends LitElement {
                 ></iron-icon>
               </div>
               <div>
-                <div class="layout vertical">
-                  <span style="font-size: 1.1rem; font-weight: 500;"
-                    >${project.name}<vaadin-button
-                      @click=${() => {
-                        this.dispatchEvent(
-                          new CustomEvent('test', { detail: { type: 'update-project', project_uuid: project.uuid } })
-                        );
-                      }}
-                      theme="primary"
-                      >EDIT</vaadin-button
-                    ></span
+                <div class="layout vertical project-details">
+                  <span class="" style="font-size: 1.1rem; font-weight: 500;">${project.name}</span
                   ><span>${project.description}</span>
                 </div>
               </div>
+              <div>
+                <paper-icon-button
+                  class="edit-project"
+                  icon="settings"
+                  @click=${() => {
+                    this.dispatchEvent(
+                      new CustomEvent('test', { detail: { type: 'update-project', project_uuid: project.uuid } })
+                    );
+                  }}
+                ></paper-icon-button>
+              </div>
               <div class="flex"></div>
-              <div>Icons</div>
+              <div class="layout horizontal">
+                ${this.project_to_assigned_users_map?.get(project.uuid)?.length > 0
+                  ? this.project_to_assigned_users_map
+                      .get(project.uuid)
+                      .sort(ui_helpers.sortUsers)
+                      .slice(0, 4)
+                      .map((team_user) => {
+                        return ui_helpers.renderUser(
+                          this.team_to_org_user_map.get(team_user.uuid),
+                          team_user,
+                          true,
+                          true
+                        );
+                      })
+                  : html`-`}
+              </div>
+              <div style="margin-left: 1.8rem; font-weight: 500;">
+                ${this.project_to_assigned_users_map.get(project.uuid).length > 4
+                  ? '+' + (this.project_to_assigned_users_map.get(project.uuid).length - 4).toString()
+                  : ''}
+              </div>
               <div class="flex"></div>
               <div class="layout vertical progress">
                 <div class="layout horizontal justified" style="margin-bottom: 0.5rem;">
