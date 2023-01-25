@@ -11,6 +11,8 @@ import '@vaadin/vaadin-combo-box/vaadin-combo-box';
 import '@vaadin/vaadin-dialog/vaadin-dialog';
 import '@vaadin/vaadin-text-field/vaadin-text-field';
 
+import '@vaadin/vaadin-button/vaadin-button';
+
 import 'multiselect-combo-box/multiselect-combo-box';
 
 import { all } from './styles/styles';
@@ -21,6 +23,7 @@ import './components/left-panel';
 import './components/project-page';
 import { render } from 'lit-html';
 import { PaperToastElement } from '@polymer/paper-toast';
+import { ui_helpers } from './helpers';
 
 type Pages = 'one' | 'two' | 'three';
 
@@ -79,6 +82,9 @@ export class WeDo extends LitElement {
 
   @property({ attribute: false })
   dialog_opened: boolean = false;
+
+  @property({ attribute: false })
+  change_tasks_state_disabled: boolean = false;
 
   @property()
   page: Pages = 'one';
@@ -170,6 +176,7 @@ export class WeDo extends LitElement {
                   <iron-pages selected=${this.page} attr-for-selected="page">
                     <div class="wedo-page" page="one">
                       <project-page
+                        .change_tasks_state_disabled=${this.change_tasks_state_disabled}
                         .team_users=${this.team_users}
                         .team_to_org_user_map=${this.team_to_org_user_map}
                         .team_projects=${this.team_projects}
@@ -177,13 +184,34 @@ export class WeDo extends LitElement {
                         .team_tasks_no_project=${this.team_tasks_no_project}
                         .team_state=${this.team_state}
                         .project_to_assigned_users_map=${this.project_to_assigned_users_map}
-                        @test=${(e) => {
+                        @updateProject=${(e) => {
                           this.dialog_type = e.detail.type;
                           if (this.dialog_type === 'update-project') {
                             let project = this.team_projects.find((project) => project.uuid === e.detail.project_uuid);
                             if (project) {
                               this.openDialog(this.projectDialogTemplate(project));
                             }
+                          }
+                        }}
+                        @changeTasksState=${(e) => {
+                          this.change_tasks_state_disabled = true;
+
+                          let task = this.team_tasks.find((task) => task.uuid === e.detail.task_uuid);
+                          if (task) {
+                            let task_state = task.state;
+                            if (task_state === 2) {
+                              task_state = -1;
+                            }
+
+                            setTimeout(() => {
+                              ui_helpers.show_toast(
+                                'success',
+                                'Task: ' + "'" + task.name + "'" + ' was successfully updated.'
+                              );
+                              this.change_tasks_state_disabled = false;
+                            }, 2000);
+                          } else {
+                            this.change_tasks_state_disabled = false;
                           }
                         }}
                       ></project-page>
@@ -311,7 +339,7 @@ export class WeDo extends LitElement {
           let task = this.team_state.team_tasks.find((task) => task.uuid === project_tasks_uuids[i]);
 
           if (task) {
-            // removes duplicates (not allowed anyway)
+            // removes duplicates (not allowed anyway).
             let duplicate_task_index = project_tasks_arr.findIndex((pt) => pt.uuid === task.uuid);
             if (duplicate_task_index === -1) {
               project_tasks_arr.push(task);
@@ -326,7 +354,7 @@ export class WeDo extends LitElement {
                     (team_user) => team_user.uuid === project_assigned_users_uuids[j]
                   );
                   if (team_user) {
-                    // removes duplicates (not allowed anyway)
+                    // removes duplicates (not allowed anyway).
                     let duplicate_user_index = project_team_users_arr.findIndex((ptu) => ptu.uuid === team_user.uuid);
                     if (duplicate_user_index === -1) {
                       project_team_users_arr.push(team_user);
@@ -363,40 +391,6 @@ export class WeDo extends LitElement {
 
       this.team_tasks_no_project = team_tasks_no_project;
       this.goal_to_tasks_map = goal_to_tasks_map;
-    }
-  }
-
-  show_toast(type: 'success' | 'error' | 'info', message: string, persistent?: boolean) {
-    const main_app: HTMLElement = document.getElementById('main-app');
-    if (main_app) {
-      let background_color = '';
-
-      switch (type) {
-        case 'error':
-          background_color = getComputedStyle(main_app).getPropertyValue('--theme-error');
-          break;
-        case 'success':
-          background_color = getComputedStyle(main_app).getPropertyValue('--theme-primary');
-          break;
-        default:
-          background_color = getComputedStyle(main_app).getPropertyValue('--theme-secondary');
-          break;
-      }
-      main_app.style.setProperty('--paper-toast-background-color', background_color);
-
-      const toast = main_app.shadowRoot.querySelector<PaperToastElement>('#toast');
-      if (toast) {
-        if (persistent) {
-          toast.setAttribute('duration', '0');
-          toast.querySelector('vaadin-button').removeAttribute('hidden');
-        } else {
-          toast.close();
-          toast.setAttribute('duration', '5000');
-          toast.querySelector('vaadin-button').setAttribute('hidden', '');
-        }
-
-        toast.show({ text: message });
-      }
     }
   }
 
@@ -447,7 +441,7 @@ export class WeDo extends LitElement {
           'opened-changed',
           () => {
             this.dialog.remove();
-            // let the animation finish
+            // let the animation finish.
             setTimeout(() => {
               main_app.style.removeProperty('z-index');
               main_app.style.removeProperty('position');
@@ -706,7 +700,7 @@ export class WeDo extends LitElement {
                     .updateProject(this.update_project_req)
                     .then(() => {
                       this.closeDialog();
-                      this.show_toast(
+                      ui_helpers.show_toast(
                         'success',
                         'Project: ' + "'" + this.update_project_req.name + "'" + ' was successfully updated.'
                       );
@@ -714,11 +708,11 @@ export class WeDo extends LitElement {
                     })
                     .catch(() => {
                       this.closeDialog();
-                      this.show_toast('error', 'Project modification failed.');
+                      ui_helpers.show_toast('error', 'Project modification failed.');
                       this.resetUpdateProjectReq();
                     });
                 } else {
-                  this.show_toast('error', 'Project modification failed, invalid request.');
+                  ui_helpers.show_toast('error', 'Project modification failed, invalid request.');
                 }
               } else {
                 if (this.isCreateProjectReqValid()) {
@@ -726,7 +720,7 @@ export class WeDo extends LitElement {
                     .createProject(this.create_project_req)
                     .then(() => {
                       this.closeDialog();
-                      this.show_toast(
+                      ui_helpers.show_toast(
                         'success',
                         'Project: ' + "'" + this.create_project_req.name + "'" + ' was successfully created.'
                       );
@@ -734,11 +728,11 @@ export class WeDo extends LitElement {
                     })
                     .catch(() => {
                       this.closeDialog();
-                      this.show_toast('error', 'Project creation failed.');
+                      ui_helpers.show_toast('error', 'Project creation failed.');
                       this.resetCreateProjectReq();
                     });
                 } else {
-                  this.show_toast('error', 'Project creation failed, invalid request.');
+                  ui_helpers.show_toast('error', 'Project creation failed, invalid request.');
                 }
               }
             }}

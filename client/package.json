@@ -43,6 +43,7 @@
     "localforage": "^1.7.3",
     "mitt": "^3.0.0",
     "moment": "^2.29.1",
-    "randomcolor": "^0.5.4"
+    "randomcolor": "^0.5.4",
+    "@dreamworld/dw-tooltip": "^2.1.0"
   }
 }

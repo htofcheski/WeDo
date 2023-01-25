@@ -1,3 +1,4 @@
+import { PaperToastElement } from '@polymer/paper-toast';
 import { html, TemplateResult } from 'lit-element';
 import randomColor = require('randomcolor');
 import { OrgUser, TeamUser } from './types';
@@ -17,12 +18,12 @@ export const ui_helpers = {
       .substring(0, 2);
 
     let seed = team_user.uuid ? team_user.uuid : org_user.email ? org_user.email : org_user.uuid;
-    let margin = icon_only ? (overlap_icons ? '-1.5rem' : '0.3rem') : '0.75rem';
+    let margin = icon_only ? (overlap_icons ? '-1.1rem' : '0.3rem') : '0.75rem';
+    let margin_hover = overlap_icons ? '-1rem' : '0';
 
     return html`
       <style>
         #${'user-id-' + seed}[initials]:before {
-          box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px;
           content: attr(initials);
           display: inline-block;
           font-size: 0.75rem;
@@ -36,7 +37,12 @@ export const ui_helpers = {
           margin-right: ${margin};
           color: white;
         }
+        #${'user-id-' + seed}[initials]:hover {
+          margin-top: ${margin_hover};
+        }
         [initials] {
+          filter: drop-shadow(1px 1px 1px rgba(0, 0, 0, 0.3));
+          transition: 0.3s;
           margin: 0;
           padding: 0;
         }
@@ -77,5 +83,47 @@ export const ui_helpers = {
       seed: seed,
       luminosity: 'dark',
     });
+  },
+
+  show_toast(type: 'success' | 'error' | 'info', message: string, persistent?: boolean) {
+    const main_app: HTMLElement = document.getElementById('main-app');
+    if (main_app) {
+      let background_color = '';
+
+      switch (type) {
+        case 'error':
+          background_color = getComputedStyle(main_app).getPropertyValue('--theme-error');
+          break;
+        case 'success':
+          background_color = getComputedStyle(main_app).getPropertyValue('--theme-primary');
+          break;
+        default:
+          background_color = getComputedStyle(main_app).getPropertyValue('--theme-secondary');
+          break;
+      }
+      main_app.style.setProperty('--paper-toast-background-color', background_color);
+
+      const toast = main_app.shadowRoot.querySelector<PaperToastElement>('#toast');
+      if (toast) {
+        if (persistent) {
+          toast.setAttribute('duration', '0');
+          toast.querySelector('vaadin-button').removeAttribute('hidden');
+        } else {
+          toast.close();
+          toast.setAttribute('duration', '5000');
+          toast.querySelector('vaadin-button').setAttribute('hidden', '');
+        }
+
+        toast.show({ text: message });
+      }
+    }
+  },
+  add3Dots(string: string, limit: number): string {
+    var dots = '...';
+    if (string.length > limit) {
+      string = string.substring(0, limit) + dots;
+    }
+
+    return string;
   },
 };
