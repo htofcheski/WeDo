@@ -58,6 +58,9 @@ export class LeftPanel extends LitElement {
   @property({ attribute: false })
   only_me: boolean = false;
 
+  @property({ attribute: false })
+  delete_mode: boolean = false;
+
   static styles = all.concat(css`
     :host {
       display: flex;
@@ -83,7 +86,7 @@ export class LeftPanel extends LitElement {
       color: rgb(51, 51, 51);
       margin: 1.5rem 0.2rem;
     }
-    .paper-tabs-container{
+    .paper-tabs-container {
       margin-top: 0.6rem;
      }
      .paper-tabs {
@@ -139,6 +142,10 @@ export class LeftPanel extends LitElement {
       color: black;
       opacity: 1;
     }
+    .update-project[delete]:hover {
+      color: var(--theme-error);
+      opacity: 1;
+    }
     .expand-project {
       margin-right: 1rem;
       border-radius: 1rem;
@@ -160,7 +167,7 @@ export class LeftPanel extends LitElement {
       overflow-y: scroll;
       max-height: 20rem;
     }
-    .expanded-part[no-project]{
+    .expanded-part[no-project] {
       margin-top: 0;
     }
     .overflow-assigned-users {
@@ -195,7 +202,7 @@ export class LeftPanel extends LitElement {
       font-weight: 400;
       font-size: 1.1rem;
     }
-    .state-button{
+    .state-button {
       margin-right: 1rem;
     }
     .state-button[state="0"] {
@@ -243,12 +250,18 @@ export class LeftPanel extends LitElement {
       width: 7rem;
       max-width: 7rem;
     }
-    .only-me{
+    .only-me {
       --paper-toggle-button-checked-button-color:  var(--theme-primary);
       --paper-toggle-button-checked-ink-color: var(--theme-primary);
       font-weight: 500;
     }
-    .mood-icon{
+    .delete-mode {
+      --paper-toggle-button-checked-button-color:  var(--theme-error);
+      --paper-toggle-button-checked-ink-color: var(--theme-error);
+      --paper-toggle-button-checked-bar-color: var(--theme-error);
+      font-weight: 500;
+    }
+    .mood-icon {
       margin-left: 0.5rem;
       color: var(--theme-primary);
     }
@@ -279,6 +292,22 @@ export class LeftPanel extends LitElement {
 
         <div class="layout horizontal justified">
           <span class="header">${this.page_name}</span>
+          <span class="flex"></span>
+          <paper-toggle-button
+            .checked=${this.delete_mode}
+            @checked-changed=${(e) => {
+              let checked = Boolean(e.detail.value);
+              if (checked != this.delete_mode) {
+                this.delete_mode = checked;
+                if (this.delete_mode) {
+                  ui_helpers.show_toast('info', 'Delete mode is on.');
+                }
+              }
+            }}
+            class="delete-mode"
+            >Delete mode</paper-toggle-button
+          >
+          <span class="flex" style="flex: 0.05"></span>
           <paper-toggle-button
             .checked=${this.only_me}
             @checked-changed=${(e) => {
@@ -305,7 +334,7 @@ export class LeftPanel extends LitElement {
                     }
                   }
                 }
-                this.page_name = this.page === '0' ? 'My Tasks' : 'My Past Tasks';
+                this.page_name = this.page === '0' ? 'Tasks' : 'Past Tasks';
               }}
             >
               <paper-tab>Open</paper-tab>
@@ -349,13 +378,22 @@ export class LeftPanel extends LitElement {
                 <div>
                   <paper-icon-button
                     class="update-project"
-                    icon="settings"
+                    ?delete=${this.delete_mode}
+                    icon=${this.delete_mode ? 'delete' : 'settings'}
                     @click=${() => {
-                      this.dispatchEvent(
-                        new CustomEvent('updateProject', {
-                          detail: { type: 'update-project', project_uuid: project.uuid },
-                        })
-                      );
+                      if (this.delete_mode) {
+                        this.dispatchEvent(
+                          new CustomEvent('deleteProject', {
+                            detail: { project_uuid: project.uuid },
+                          })
+                        );
+                      } else {
+                        this.dispatchEvent(
+                          new CustomEvent('updateProject', {
+                            detail: { type: 'update-project', project_uuid: project.uuid },
+                          })
+                        );
+                      }
                     }}
                   ></paper-icon-button>
                 </div>
@@ -386,7 +424,7 @@ export class LeftPanel extends LitElement {
                     );
                   }}
                   class="layout vertical add-button"
-                  ?hide=${this.page === '1'}
+                  ?hide=${this.page === '1' || this.delete_mode}
                 >
                   <iron-icon icon="icons:add"></iron-icon>
                 </div>
@@ -436,10 +474,15 @@ export class LeftPanel extends LitElement {
                         <div class="flex"></div>
                         <paper-icon-button
                           ?disabled=${this.change_tasks_state_disabled}
-                          icon="open-in-new"
+                          ?delete=${this.delete_mode}
+                          icon=${this.delete_mode ? 'delete' : 'open-in-new'}
                           class="update-task-button update-project"
                           @click=${() => {
-                            this.dispatchEvent(new CustomEvent('updateTask', { detail: { task_uuid: task.uuid } }));
+                            if (this.delete_mode) {
+                              this.dispatchEvent(new CustomEvent('deleteTask', { detail: { task_uuid: task.uuid } }));
+                            } else {
+                              this.dispatchEvent(new CustomEvent('updateTask', { detail: { task_uuid: task.uuid } }));
+                            }
                           }}
                         ></paper-icon-button>
                         <div class="flex"></div>
@@ -477,6 +520,7 @@ export class LeftPanel extends LitElement {
             <div class="flex"></div>
             <div>
               <paper-icon-button
+                ?hidden=${this.delete_mode}
                 icon="add"
                 style="color: var(--theme-primary);"
                 @click=${() => {
@@ -529,10 +573,15 @@ export class LeftPanel extends LitElement {
                     <div class="flex"></div>
                     <paper-icon-button
                       ?disabled=${this.change_tasks_state_disabled}
-                      icon="open-in-new"
+                      ?delete=${this.delete_mode}
+                      icon=${this.delete_mode ? 'delete' : 'open-in-new'}
                       class="update-task-button update-project"
                       @click=${() => {
-                        this.dispatchEvent(new CustomEvent('updateTask', { detail: { task_uuid: task.uuid } }));
+                        if (this.delete_mode) {
+                          this.dispatchEvent(new CustomEvent('deleteTask', { detail: { task_uuid: task.uuid } }));
+                        } else {
+                          this.dispatchEvent(new CustomEvent('updateTask', { detail: { task_uuid: task.uuid } }));
+                        }
                       }}
                     ></paper-icon-button>
                     <div class="flex"></div>

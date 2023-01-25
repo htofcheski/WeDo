@@ -197,6 +197,12 @@ export class WeDo extends LitElement {
                         .team_projects=${this.team_projects}
                         .project_to_tasks_map=${this.project_to_tasks_map}
                         .project_to_assigned_users_map=${this.project_to_assigned_users_map}
+                        @deleteProject=${(e) => {
+                          console.log(e.detail.project_uuid);
+                        }}
+                        @deleteTask=${(e) => {
+                          console.log(e.detail.task_uuid);
+                        }}
                         @createTaskForProject=${(e) => {
                           console.log(e.detail.project_uuid);
                         }}
