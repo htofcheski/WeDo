@@ -63,13 +63,14 @@ func handleRoot(w http.ResponseWriter, r *http.Request) {
 		Data:       state_data,
 	}
 
-	org_user, org, teams, err := apiUserState(r)
+	org_user, org, teams, teams_user, err := apiUserState(r)
 	if err != nil {
 		templates.ExecuteTemplate(w, "login.html", state)
 		return
 	}
 
-	state_data["logged_in_user"] = org_user
+	state_data["logged_in_org_user"] = org_user
+	state_data["teams_user_for_logged_in_org_user"] = teams_user
 	state_data["organization"] = org
 	state_data["teams"] = teams
 
@@ -378,7 +379,7 @@ func teamState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, _, teams, err := apiUserState(r)
+	_, _, teams, _, err := apiUserState(r)
 	if err != nil {
 		boom.BadData(w, err.Error())
 		Log.Error("teamState: " + err.Error())

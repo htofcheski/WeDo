@@ -70,26 +70,26 @@ func CheckPasswordHash(password, hash string) bool {
 	return err == nil
 }
 
-func apiUserState(r *http.Request) (*OrgUser, *Organization, TeamList, error) {
+func apiUserState(r *http.Request) (*OrgUser, *Organization, TeamList, TeamUserList, error) {
 	user_uuid, err := GetCurrentSession(r)
 	if err != nil {
-		return &OrgUser{}, &Organization{}, TeamList{}, err
+		return &OrgUser{}, &Organization{}, TeamList{}, TeamUserList{}, err
 	}
 
 	org_user, err := orgUserByUUID(user_uuid)
 	if err != nil {
-		return &OrgUser{}, &Organization{}, TeamList{}, err
+		return &OrgUser{}, &Organization{}, TeamList{}, TeamUserList{}, err
 	}
 
 	org, err := organizationForOrgUser(org_user)
 	if err != nil {
-		return &OrgUser{}, &Organization{}, TeamList{}, err
+		return &OrgUser{}, &Organization{}, TeamList{}, TeamUserList{}, err
 	}
 
-	teams, err := teamsForOrgUser(org_user)
+	teams, teams_user, err := teamsForOrgUser(org_user)
 	if err != nil {
-		return &OrgUser{}, &Organization{}, TeamList{}, err
+		return &OrgUser{}, &Organization{}, TeamList{}, TeamUserList{}, err
 	}
 
-	return org_user, org, teams, nil
+	return org_user, org, teams, teams_user, nil
 }

@@ -239,12 +239,12 @@ func userInTeam(user *OrgUser, team *Team) error {
 	return errors.New("user is already on that team")
 }
 
-func teamsForOrgUser(org_user *OrgUser) (TeamList, error) {
+func teamsForOrgUser(org_user *OrgUser) (TeamList, TeamUserList, error) {
 	teams_user := TeamUserList{}
 	err := DB.postgre.Select(&teams_user, DB.QueriesRawMap["teams-user-by-user-index"], org_user.Index)
 	if err != nil {
 		Log.Error("teamsForOrgUser: " + err.Error())
-		return TeamList{}, err
+		return TeamList{}, TeamUserList{}, err
 	}
 
 	if len(teams_user) > 0 {
@@ -252,17 +252,17 @@ func teamsForOrgUser(org_user *OrgUser) (TeamList, error) {
 		in_query, args, err := sqlx.In(DB.QueriesRawMap["teams-for-org-user"], teams_user.TeamIndexes())
 		if err != nil {
 			Log.Error("teamsForOrgUser: " + err.Error())
-			return TeamList{}, err
+			return TeamList{}, TeamUserList{}, err
 		}
 		err = DB.postgre.Select(&teams, DB.postgre.Rebind(in_query), args...)
 		if err != nil {
 			Log.Error("teamsForOrgUser: " + err.Error())
-			return TeamList{}, err
+			return TeamList{}, TeamUserList{}, err
 		}
-		return teams, nil
+		return teams, teams_user, nil
 	}
 
-	return TeamList{}, nil
+	return TeamList{}, TeamUserList{}, nil
 }
 
 func organizationForOrgUser(org_user *OrgUser) (*Organization, error) {

@@ -1,6 +1,16 @@
 import { LitElement, html, customElement, property, TemplateResult, css } from 'lit-element';
 import { database } from './database';
-import { CreateProjectReq, OrgUser, Team, TeamProject, TeamState, TeamTask, TeamUser, UpdateProjectReq } from './types';
+import {
+  CreateProjectReq,
+  OrgUser,
+  Team,
+  TeamProject,
+  TeamState,
+  TeamTask,
+  TeamUser,
+  UpdateProjectReq,
+  LoggedInUser,
+} from './types';
 
 import '@polymer/iron-pages/iron-pages';
 import '@polymer/paper-spinner/paper-spinner';
@@ -43,6 +53,9 @@ export class WeDo extends LitElement {
 
   @property({ attribute: false })
   available_teams: Team[] = window.State.Data.teams || [];
+
+  @property({ attribute: false })
+  logged_in_user: LoggedInUser = undefined;
 
   @property({ attribute: false })
   team_state: TeamState = undefined;
@@ -177,13 +190,19 @@ export class WeDo extends LitElement {
                     <div class="wedo-page" page="one">
                       <project-page
                         .change_tasks_state_disabled=${this.change_tasks_state_disabled}
+                        .logged_in_user=${this.logged_in_user}
                         .team_users=${this.team_users}
                         .team_to_org_user_map=${this.team_to_org_user_map}
+                        .team_tasks_no_project=${this.team_tasks_no_project}
                         .team_projects=${this.team_projects}
                         .project_to_tasks_map=${this.project_to_tasks_map}
-                        .team_tasks_no_project=${this.team_tasks_no_project}
-                        .team_state=${this.team_state}
                         .project_to_assigned_users_map=${this.project_to_assigned_users_map}
+                        @createTaskForProject=${(e) => {
+                          console.log(e.detail.project_uuid);
+                        }}
+                        @updateTask=${(e) => {
+                          console.log(e.detail.task_uuid);
+                        }}
                         @updateProject=${(e) => {
                           this.dialog_type = e.detail.type;
                           if (this.dialog_type === 'update-project') {
@@ -272,6 +291,7 @@ export class WeDo extends LitElement {
         this.team_projects = [].concat(this.team_state.team_projects);
         this.team_tasks = [].concat(this.team_state.team_tasks);
         this.buildMapsFromTeamState();
+        this.buildLoggedInUser();
       });
     }
   }
@@ -317,6 +337,34 @@ export class WeDo extends LitElement {
     }
 
     return Object.assign({}, team_state);
+  }
+
+  buildLoggedInUser() {
+    let org_user_from_window_state = window.State.Data.logged_in_org_user as OrgUser;
+    let team_users_for_logged_in_org_user = window.State.Data.teams_user_for_logged_in_org_user as TeamUser[];
+    if (team_users_for_logged_in_org_user && team_users_for_logged_in_org_user.length > 0) {
+      team_users_for_logged_in_org_user.forEach((team_user) => {
+        let org_user = this.team_to_org_user_map.get(team_user.uuid);
+        if (org_user) {
+          if (org_user.uuid === org_user_from_window_state.uuid) {
+            this.logged_in_user = Object.assign(
+              {},
+              {
+                uuid: org_user.uuid,
+                username: org_user.username,
+                email: org_user.email,
+                description: org_user.description,
+                profile_picture: org_user.profile_picture,
+                created: org_user.created,
+                updated: org_user.updated,
+                team_user_uuid: team_user.uuid,
+              }
+            );
+            return;
+          }
+        }
+      });
+    }
   }
 
   buildMapsFromTeamState() {

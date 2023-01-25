@@ -71,3 +71,7 @@ export interface TeamState {
   team_projects: TeamProject[];
   team_tasks: TeamTask[];
 }
+
+export interface LoggedInUser extends OrgUser {
+  team_user_uuid: string;
+}
