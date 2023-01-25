@@ -245,7 +245,19 @@ export class WeDo extends LitElement {
                     <div class="wedo-page" page="three"></div>
                   </iron-pages>
                 </div>
-                <div class="layout horizontal" style="width: 25%;"><right-panel></right-panel></div>
+                <div class="layout horizontal" style="width: 25%;">
+                  <right-panel
+                    .team_users=${this.team_users}
+                    .team_to_org_user_map=${this.team_to_org_user_map}
+                    .team_tasks=${this.team_tasks}
+                    @viewTeam=${() => {
+                      console.log('view team...');
+                    }}
+                    @updateTask=${(e) => {
+                      console.log(e.detail.task_uuid);
+                    }}
+                  ></right-panel>
+                </div>
               </div>
             </div>
           </div>

@@ -206,16 +206,16 @@ export class LeftPanel extends LitElement {
       margin-right: 1rem;
     }
     .state-button[state="0"] {
-      color: gray !important;
-      --paper-icon-button-ink-color: gray !important;
+      color: var(--theme-open) !important;
+      --paper-icon-button-ink-color: var(--theme-open) !important;
     }
     .state-button[state="1"] {
-      color: blue !important;
-      --paper-icon-button-ink-color: blue !important;
+      color: var(--theme-active) !important;
+      --paper-icon-button-ink-color: var(--theme-active) !important;
     }
     .state-button[state="2"] {
-      color: green !important;
-      --paper-icon-button-ink-color: green !important;
+      color: var(--theme-done) !important;
+      --paper-icon-button-ink-color: var(--theme-done) !important;
     }
     .state-button[disabled] {
       color: var(--theme-secondary) !important;

@@ -16,6 +16,9 @@ body {
     --theme-primary: #7771eb;
     --theme-secondary: #777;
     --theme-error: #cc0000;
+    --theme-open: #ffae00;
+    --theme-active: #0077dc;
+    --theme-done: #00bc57;
 }
 
 .tippy-tooltip {

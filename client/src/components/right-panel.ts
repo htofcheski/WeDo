@@ -1,77 +1,25 @@
 import { LitElement, html, customElement, property, css, TemplateResult } from 'lit-element';
 
 import { all } from '../styles/styles';
-import randomColor = require('randomcolor');
+import { OrgUser, TeamTask, TeamUser } from '../types';
 
-import '@polymer/iron-image';
+import { ui_helpers } from '../helpers';
 
 import moment = require('moment');
-
-export interface CHK_TEAM_USER {
-  uuid?: string;
-  name?: string;
-  picture?: string;
-  email?: string;
-}
 
 @customElement('right-panel')
 export class RightPanel extends LitElement {
   @property({ attribute: false })
-  team: CHK_TEAM_USER[] = [
-    {
-      uuid: '82',
-      name: 'Peyton Prescott',
-      picture: 'https://randomuser.me/api/portraits/women/82.jpg',
-      email: 'peyton.prescott@example.com',
-    },
-    {
-      uuid: '2',
-      name: 'HipBob',
-      picture: 'https://i.pinimg.com/originals/a3/63/ab/a363abfb9c0ca6380275db29f70443eb.jpg',
-      email: 'test2@test2.com',
-    },
-    {
-      uuid: '3',
-      name: 'John',
-      email: 'test3@test3.com',
-    },
-    {
-      uuid: '4',
-      name: 'JUus',
-      email: 'test@test.com',
-    },
-    {
-      uuid: '5',
-      name: 'Dzoni',
-      email: 'test2@test2.com',
-    },
-    {
-      uuid: '6',
-      name: 'Johnefer',
-      email: 'test3@test3.com',
-    },
-  ];
+  team_users: TeamUser[] = [];
+
+  @property({ attribute: false })
+  team_to_org_user_map: Map<string, OrgUser> = new Map();
+
+  @property({ attribute: false })
+  team_tasks: TeamTask[] = [];
 
   @property({ attribute: false })
   projects_calendar_moment: moment.Moment = moment();
-
-  @property({ attribute: false })
-  tasks: any[] = [
-    {
-      uuid: '000999',
-      name: 'Ova e primer task sto e epten dolg u slucaj da otide na nova linija. Ajde uste malu da otide pak u nova linija',
-      updated: '1666887627',
-    },
-    { uuid: '321998', name: 'test21123', updated: '1666887627' },
-    { uuid: '654997', name: 'test 3', updated: '1666887627' },
-    { uuid: '987996', name: 'test 4', updated: '1666887627' },
-    { uuid: '789995', name: 'test 5', updated: '1666887627' },
-    { uuid: '456994', name: 'test 6', updated: '1666887627' },
-    { uuid: '123993', name: 'test 73', updated: '1666887627' },
-    { uuid: '111111', name: 'test 711', updated: '1666887627' },
-    { uuid: '333333', name: 'test 72', updated: '1666887627' },
-    { uuid: '555555', name: 'test 32', updated: '1666887627' },
-  ];
 
   static styles = all.concat(css`
     :host {
@@ -166,6 +114,35 @@ export class RightPanel extends LitElement {
     .recent-task:hover {
       background-color: lightgray;
     }
+    .recent-task-container {
+      word-break: break-all;
+    }
+    .scroll-tasks {
+      overflow-y: scroll;
+      height: 100%;
+    }
+    .state {
+      width: 0.7rem;
+      height: 0.7rem;
+      border-radius: 50%;
+      align-self: center;
+    }
+    .state[state='0'] {
+      background: var(--theme-open) !important;
+    }
+    .state[state='1'] {
+      background: var(--theme-active) !important;
+    }
+    .state[state='2'] {
+      background: var(--theme-done) !important;
+    }
+    .recent-tasks-empty {
+      width: 70%;
+      height: 70%;
+      opacity: 0.1;
+      place-self: center;
+      margin-top: 2rem;
+    }
   `);
 
   render() {
@@ -174,24 +151,23 @@ export class RightPanel extends LitElement {
         <div class="layout vertical">
           <div class="layout horizontal justified push-down">
             <span class="section-title"
-              >Team <span style="color: var(--theme-primary);">(${this.team.length})</span></span
+              >Team <span style="color: var(--theme-primary);">(${this.team_users?.length || 0})</span></span
             ><span class="flex"></span
             ><span
               class="span-to-button unselectable"
               style="font-size: 0.75rem;"
               @click=${() => {
-                //@todo CHK
-                console.log('opening');
+                this.dispatchEvent(new CustomEvent('viewTeam', {}));
               }}
               >View all</span
             >
           </div>
           <div class="layout horizontal user-icons">
-            ${this.team
-              .sort(this.sortUsers)
-              .slice(0, 5)
-              .map((user) => {
-                return this.renderUser(user, true);
+            ${this.team_users
+              ?.sort(ui_helpers.sortUsers)
+              ?.slice(0, 5)
+              ?.map((team_user) => {
+                return ui_helpers.renderUser(this.team_to_org_user_map.get(team_user.uuid), team_user, true);
               })}
           </div>
         </div>
@@ -243,90 +219,14 @@ export class RightPanel extends LitElement {
         <div class="layout horizontal justified">
           <span class="section-title">Recent Task Updates</span>
         </div>
-        <div class="layout vertical push-down" style="overflow-y: scroll; height: 100%;">
+        <div class="layout vertical push-down scroll-tasks">
           <div class="layout vertical justified">${this.renderRecentTasks()}</div>
         </div>
       </div>
     `;
   }
 
-  renderUser(user: CHK_TEAM_USER, icon_only: boolean): TemplateResult {
-    if (!user) {
-      return html``;
-    }
-    if (!user.name || !user.email) {
-      return html``;
-    }
-
-    let initials = user.name
-      .match(/\b(\w)/g)
-      .join('')
-      .substring(0, 2);
-
-    let seed = user.uuid ? user.uuid : user.email;
-    let margin = icon_only ? '0.3rem' : '0.75rem';
-
-    return html`
-      <style>
-        #${'user-id-' + seed}[initials]:before {
-          content: attr(initials);
-          display: inline-block;
-          font-size: 0.75rem;
-          width: 2.5rem;
-          height: 2.5rem;
-          line-height: 2.5rem;
-          text-align: center;
-          border-radius: 50%;
-          background: ${this.color(seed)};
-          vertical-align: middle;
-          margin-right: ${margin};
-          color: white;
-        }
-        [initials] {
-          margin: 0;
-          padding: 0;
-        }
-      </style>
-      <div class="user layout horizontal center">
-        ${user.picture
-          ? html`<iron-image
-              class="user_picture"
-              sizing="cover"
-              src=${user.picture}
-              aria-hidden="true"
-              style="min-height: 2.5rem; min-width: 2.5rem; margin-right: ${margin}; border-radius: 50%;"
-            ></iron-image>`
-          : html`<p id=${'user-id-' + seed} initials=${initials} aria-hidden="true"></p>`}
-        ${!icon_only ? html` <div class="user_name">${user.name || user.email}</div>` : html``}
-      </div>
-    `;
-  }
-
-  sortUsers(a: CHK_TEAM_USER, b: CHK_TEAM_USER): number {
-    let a_comp = a.name || a.email;
-    let b_comp = b.name || b.email;
-    if (!a_comp || !b_comp) {
-      return 0;
-    }
-
-    if (a_comp < b_comp) {
-      return -1;
-    }
-    if (a_comp > b_comp) {
-      return 1;
-    }
-    return 0;
-  }
-
-  color(seed: number | string): string {
-    return randomColor({
-      seed: seed,
-      luminosity: 'dark',
-    });
-  }
-
   renderDates(): TemplateResult {
-    //@todo CHK
     let day_column_arr: TemplateResult[] = [];
     let projects_calendar_moment_cloned = this.projects_calendar_moment.clone();
 
@@ -359,37 +259,39 @@ export class RightPanel extends LitElement {
 
   renderRecentTasks(): TemplateResult {
     let recent_task_arr: TemplateResult[] = [];
+    let moment_now_utc = moment().subtract(1, 'day').utc();
 
-    //@todo CHK
+    this.team_tasks
+      ?.filter((team_task) => moment.utc(team_task.updated).isAfter(moment_now_utc))
+      .sort(ui_helpers.sortTeamTask)
+      .forEach((team_task) => {
+        recent_task_arr.push(
+          html`
+            <div class="layout horizontal justified recent-task-container">
+              <button
+                class="recent-task"
+                @click=${() => {
+                  this.dispatchEvent(new CustomEvent('updateTask', { detail: { task_uuid: team_task.uuid } }));
+                }}
+              >
+                <div class="layout horizontal">
+                  <div class="layout vertical justified state" state=${team_task.state}></div>
+                  <div class="flex"></div>
+                  <div>${moment.utc(team_task.updated).local().format('DD.MM.YYYY HH:mm:ss')}</div>
+                </div>
+                <div class="layout horizontal justified">${team_task.name}</div>
+              </button>
+            </div>
+          `
+        );
+      });
 
-    this.tasks.forEach((task) => {
-      recent_task_arr.push(
-        html`
-          <div class="layout horizontal justified">
-            <button class="recent-task">
-              <div class="layout horizontal">
-                <div
-                  class="layout vertical justified"
-                  style="background: ${this.color(
-                    task.uuid
-                  )}; width: 0.7rem; height: 0.7rem; border-radius: 50%; align-self: center;"
-                ></div>
-                <div
-                  class="layout vertical justified"
-                  style="background: green; width: 0.7rem; height: 0.7rem; border-radius: 50%; align-self: center;"
-                ></div>
-                <div class="flex"></div>
-                <div>${moment.utc(task.updated * 1000).format('DD.MM.YYYY HH:mm:ss')}</div>
-              </div>
-              <div class="layout horizontal justified">${task.name}</div>
-            </button>
-          </div>
-        `
-      );
-    });
-
-    return html`${recent_task_arr.map((recent_task) => {
-      return recent_task;
-    })}`;
+    if (recent_task_arr.length > 0) {
+      return html`${recent_task_arr.map((recent_task) => {
+        return recent_task;
+      })}`;
+    } else {
+      return html`<iron-icon class="recent-tasks-empty" icon="alarm-on"></iron-icon>`;
+    }
   }
 }
