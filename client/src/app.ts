@@ -173,6 +173,8 @@ export class WeDo extends LitElement {
           </paper-toast>
           <div class="layout horizontal" style="height: 100%;">
             <left-panel
+              .page=${this.page}
+              .selected_team_uuid=${this.selected_team_uuid}
               @changePage=${(e) => {
                 let new_page = String(e.detail.page) as Pages;
                 if (new_page) {
@@ -313,10 +315,10 @@ export class WeDo extends LitElement {
 
       api.teamState(this.selected_team_uuid).then((resp) => {
         this.team_state = this.rebuildTeamState(resp);
-        this.team_users = [].concat(this.team_state.team_users);
+        this.team_users = this.team_state.team_users?.length > 0 ? [].concat(this.team_state.team_users) : [];
         this.team_to_org_user_map = new Map(this.team_state.team_to_org_user_map);
-        this.team_projects = [].concat(this.team_state.team_projects);
-        this.team_tasks = [].concat(this.team_state.team_tasks);
+        this.team_projects = this.team_state.team_projects?.length > 0 ? [].concat(this.team_state.team_projects) : [];
+        this.team_tasks = this.team_state.team_tasks?.length > 0 ? [].concat(this.team_state.team_tasks) : [];
         this.buildMapsFromTeamState();
         this.buildLoggedInUser();
       });

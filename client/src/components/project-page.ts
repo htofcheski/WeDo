@@ -85,6 +85,7 @@ export class LeftPanel extends LitElement {
       font-weight: 600;
       color: rgb(51, 51, 51);
       margin: 1.5rem 0.2rem;
+      min-width: 8rem;
     }
     .paper-tabs-container {
       margin-top: 0.6rem;

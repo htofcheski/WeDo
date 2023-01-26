@@ -263,7 +263,7 @@ export class RightPanel extends LitElement {
     let moment_now_utc = moment().subtract(1, 'day').utc();
 
     this.team_tasks
-      ?.filter((team_task) => moment.utc(team_task.updated).isAfter(moment_now_utc))
+      ?.filter((team_task) => moment.utc(team_task?.updated).isAfter(moment_now_utc))
       .sort(ui_helpers.sortTeamTask)
       .forEach((team_task) => {
         recent_task_arr.push(
@@ -272,15 +272,15 @@ export class RightPanel extends LitElement {
               <button
                 class="recent-task"
                 @click=${() => {
-                  this.dispatchEvent(new CustomEvent('updateTask', { detail: { task_uuid: team_task.uuid } }));
+                  this.dispatchEvent(new CustomEvent('updateTask', { detail: { task_uuid: team_task?.uuid } }));
                 }}
               >
                 <div class="layout horizontal">
-                  <div class="layout vertical justified state" state=${team_task.state}></div>
+                  <div class="layout vertical justified state" state=${team_task?.state}></div>
                   <div class="flex"></div>
-                  <div>${moment.utc(team_task.updated).local().format('DD.MM.YYYY HH:mm:ss')}</div>
+                  <div>${moment.utc(team_task?.updated).local().format('DD.MM.YYYY HH:mm:ss')}</div>
                 </div>
-                <div class="layout horizontal justified">${team_task.name}</div>
+                <div class="layout horizontal justified">${team_task?.name}</div>
               </button>
             </div>
           `
