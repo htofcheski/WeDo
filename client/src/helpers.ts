@@ -39,7 +39,11 @@ export const ui_helpers = {
           margin-right: ${margin};
           color: white;
         }
-        #${'user-id-' + seed}[initials]:hover {
+        #${'user-picture-id-' + seed} {
+          transition: 0.3s;
+        }
+        #${'user-id-' + seed}[initials]:hover,
+        #${'user-picture-id-' + seed}:hover {
           margin-top: ${margin_hover};
         }
         [initials] {
@@ -52,6 +56,7 @@ export const ui_helpers = {
       <div class="user layout horizontal center">
         ${org_user.profile_picture
           ? html`<iron-image
+              id=${'user-picture-id-' + seed}
               class="user_picture"
               sizing="cover"
               src=${org_user.profile_picture}
