@@ -1,3 +1,5 @@
+export type Pages = 'projects' | 'statistics';
+
 export interface Team {
   uuid: string;
   name: string;

@@ -10,7 +10,15 @@ import {
   TeamUser,
   UpdateProjectReq,
   LoggedInUser,
+  Pages,
 } from './types';
+
+import { render } from 'lit-html';
+import { PaperToastElement } from '@polymer/paper-toast';
+import { ui_helpers } from './helpers';
+
+import { all } from './styles/styles';
+import { api } from './api';
 
 import '@polymer/iron-pages/iron-pages';
 import '@polymer/paper-spinner/paper-spinner';
@@ -25,17 +33,10 @@ import '@vaadin/vaadin-button/vaadin-button';
 
 import 'multiselect-combo-box/multiselect-combo-box';
 
-import { all } from './styles/styles';
-import { api } from './api';
 import './components/right-panel';
 import './components/top-header';
 import './components/left-panel';
 import './components/project-page';
-import { render } from 'lit-html';
-import { PaperToastElement } from '@polymer/paper-toast';
-import { ui_helpers } from './helpers';
-
-type Pages = 'one' | 'two' | 'three';
 
 declare global {
   interface Window {
@@ -100,7 +101,7 @@ export class WeDo extends LitElement {
   change_tasks_state_disabled: boolean = false;
 
   @property()
-  page: Pages = 'one';
+  page: Pages = 'projects';
 
   @property()
   name = 'Hristijan Tofcheski';
@@ -171,9 +172,18 @@ export class WeDo extends LitElement {
             </div>
           </paper-toast>
           <div class="layout horizontal" style="height: 100%;">
-            <left-panel></left-panel>
+            <left-panel
+              @changePage=${(e) => {
+                let new_page = String(e.detail.page) as Pages;
+                if (new_page) {
+                  this.page = new_page;
+                }
+              }}
+            ></left-panel>
             <div class="layout vertical" style="width: 100%;">
               <top-header
+                .page=${this.page}
+                .logged_in_user=${this.logged_in_user}
                 @openDialog=${(e) => {
                   this.dialog_type = e.detail.type;
                   if (this.dialog_type === 'create-project') {
@@ -187,7 +197,7 @@ export class WeDo extends LitElement {
                   style="width: 75%;outline: 0.2rem solid #f2f3f5; z-index: 999; background: white;"
                 >
                   <iron-pages selected=${this.page} attr-for-selected="page">
-                    <div class="wedo-page" page="one">
+                    <div class="wedo-page" page="projects">
                       <project-page
                         .change_tasks_state_disabled=${this.change_tasks_state_disabled}
                         .logged_in_user=${this.logged_in_user}
@@ -241,8 +251,7 @@ export class WeDo extends LitElement {
                         }}
                       ></project-page>
                     </div>
-                    <div class="wedo-page" page="two"></div>
-                    <div class="wedo-page" page="three"></div>
+                    <div class="wedo-page" page="statistics"></div>
                   </iron-pages>
                 </div>
                 <div class="layout horizontal" style="width: 25%;">

@@ -1,34 +1,22 @@
 import { LitElement, html, customElement, property, css, TemplateResult } from 'lit-element';
 
+import { LoggedInUser, OrgUser, Pages, TeamUser } from '../types';
+
 import { all } from '../styles/styles';
-import randomColor = require('randomcolor');
+import { ui_helpers } from '../helpers';
 
 import '@polymer/iron-image';
 import '@polymer/paper-icon-button/paper-icon-button';
 
-import { CreateProjectReq, CreateTaskReq } from '../types';
-
-import moment = require('moment');
-import { api } from '../api';
-
-export interface CHK_TEAM_USER {
-  uuid?: string;
-  name?: string;
-  picture?: string;
-  email?: string;
-}
+import '@dreamworld/dw-tooltip/dw-tooltip';
 
 @customElement('top-header')
 export class TopHeader extends LitElement {
-  @property({ attribute: false })
-  page_name: string = 'My Projects';
+  @property()
+  page: Pages = 'projects';
 
   @property({ attribute: false })
-  user: CHK_TEAM_USER = {
-    uuid: window?.State?.Data?.logged_in_user?.uuid,
-    name: window?.State?.Data?.logged_in_user?.username,
-    email: 'diplomska@pls.com',
-  };
+  logged_in_user: LoggedInUser = undefined;
 
   static styles = all.concat(css`
     :host {
@@ -60,8 +48,8 @@ export class TopHeader extends LitElement {
   render() {
     return html`<div class="layout horizontal main-container">
       <div class="layout horizontal center-center page-name">
-        ${this.page_name}<paper-icon-button
-          ?hidden=${this.page_name != 'My Projects'}
+        ${this.page === 'projects' ? 'Projects' : 'Statistics'}<paper-icon-button
+          ?hidden=${this.page != 'projects'}
           icon="add-circle"
           style="color: var(--theme-primary);"
           @click=${() => {
@@ -70,65 +58,31 @@ export class TopHeader extends LitElement {
         ></paper-icon-button>
       </div>
       <div class="flex"></div>
-      <div class="layout horizontal center-center">${this.renderUser(this.user, false)}</div>
-    </div>`;
-  }
-
-  renderUser(user: CHK_TEAM_USER, icon_only: boolean): TemplateResult {
-    if (!user) {
-      return html``;
-    }
-    if (!user.name || !user.email) {
-      return html``;
-    }
-
-    let initials = user.name
-      .match(/\b(\w)/g)
-      .join('')
-      .substring(0, 2);
-
-    let seed = user.uuid ? user.uuid : user.email;
-    let margin = icon_only ? '0.3rem' : '0.75rem';
-
-    return html`
-      <style>
-        #${'user-id-' + seed}[initials]:before {
-          content: attr(initials);
-          display: inline-block;
-          font-size: 0.75rem;
-          width: 2.5rem;
-          height: 2.5rem;
-          line-height: 2.5rem;
-          text-align: center;
-          border-radius: 50%;
-          background: ${this.color(seed)};
-          vertical-align: middle;
-          margin-right: ${margin};
-          color: white;
-        }
-        [initials] {
-          margin: 0;
-          padding: 0;
-        }
-      </style>
-      <div class="user layout horizontal center">
-        ${user.picture
-          ? html`<iron-image
-              class="user_picture"
-              sizing="cover"
-              src=${user.picture}
-              aria-hidden="true"
-              style="min-height: 2.5rem; min-width: 2.5rem; margin-right: ${margin}; border-radius: 50%;"
-            ></iron-image>`
-          : html`<p id=${'user-id-' + seed} initials=${initials} aria-hidden="true"></p>`}
-        ${!icon_only ? html` <div class="user_name">${user.name || user.email}</div>` : html``}
+      <div id="logged-in-user" class="layout horizontal center-center">
+        ${ui_helpers.renderUser(
+          {
+            uuid: this.logged_in_user?.uuid,
+            username: this.logged_in_user?.username,
+            email: this.logged_in_user?.email,
+            description: this.logged_in_user?.description,
+            profile_picture: this.logged_in_user?.profile_picture,
+            created: this.logged_in_user?.created,
+            updated: this.logged_in_user?.updated,
+          } as OrgUser,
+          { uuid: this.logged_in_user?.team_user_uuid, created: '', updated: '' } as TeamUser,
+          false
+        )}
       </div>
-    `;
-  }
-  color(seed: number | string): string {
-    return randomColor({
-      seed: seed,
-      luminosity: 'dark',
-    });
+      ${this.logged_in_user?.email
+        ? html`
+            <dw-tooltip
+              placement="bottom"
+              offset="[-50, 0]"
+              for="logged-in-user"
+              .content=${this.logged_in_user?.email}
+            ></dw-tooltip>
+          `
+        : html``}
+    </div>`;
   }
 }
