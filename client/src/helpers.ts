@@ -5,6 +5,8 @@ import { OrgUser, TeamTask, TeamUser } from './types';
 
 import moment = require('moment');
 
+import '@dreamworld/dw-tooltip/dw-tooltip';
+
 export const ui_helpers = {
   renderUser(org_user: OrgUser, team_user: TeamUser, icon_only: boolean, overlap_icons?: boolean): TemplateResult {
     if (!org_user || !team_user) {
@@ -56,14 +58,34 @@ export const ui_helpers = {
       <div class="user layout horizontal center">
         ${org_user.profile_picture
           ? html`<iron-image
-              id=${'user-picture-id-' + seed}
-              class="user_picture"
-              sizing="cover"
-              src=${org_user.profile_picture}
-              aria-hidden="true"
-              style="min-height: 2.5rem; min-width: 2.5rem; margin-right: ${margin}; border-radius: 50%;"
-            ></iron-image>`
-          : html`<p id=${'user-id-' + seed} initials=${initials} aria-hidden="true"></p>`}
+                id=${'user-picture-id-' + seed}
+                class="user_picture"
+                sizing="cover"
+                src=${org_user.profile_picture}
+                aria-hidden="true"
+                style="min-height: 2.5rem; min-width: 2.5rem; margin-right: ${margin}; border-radius: 50%;"
+              ></iron-image>
+              ${overlap_icons && org_user?.username
+                ? html`
+                    <dw-tooltip
+                      placement="top"
+                      offset="[25, 10]"
+                      for=${'user-picture-id-' + seed}
+                      .content=${org_user.username}
+                    ></dw-tooltip>
+                  `
+                : html``}`
+          : html`<p id=${'user-id-' + seed} initials=${initials} aria-hidden="true"></p>
+              ${overlap_icons && org_user?.username
+                ? html`
+                    <dw-tooltip
+                      placement="top"
+                      offset="[50, 10]"
+                      for=${'user-id-' + seed}
+                      .content=${org_user.username}
+                    ></dw-tooltip>
+                  `
+                : html``}`}
         ${!icon_only ? html` <div class="user_name">${org_user.username || org_user.email}</div>` : html``}
       </div>
     `;

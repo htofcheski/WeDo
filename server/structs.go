@@ -230,4 +230,5 @@ type CreateTaskReq struct {
 	Name               string   `json:"name"`
 	Description        string   `json:"description"`
 	Goal               string   `json:"goal"`
+	State              int      `json:"state"`
 }

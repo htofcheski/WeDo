@@ -302,6 +302,8 @@ export class LeftPanel extends LitElement {
                 this.delete_mode = checked;
                 if (this.delete_mode) {
                   ui_helpers.show_toast('info', 'Delete mode is on.');
+                } else {
+                  ui_helpers.show_toast('info', 'Delete mode is off.');
                 }
               }
             }}
@@ -409,7 +411,7 @@ export class LeftPanel extends LitElement {
                   </div>
                   <div>
                     <paper-progress
-                      ?disabled=${project_tasks.length === 0}
+                      ?disabled=${this.project_to_tasks_map?.get(project.uuid)?.length === 0}
                       value=${this.getProjectCompletionPercentage(project.uuid)}
                       min="0"
                       max="100"
@@ -496,7 +498,12 @@ export class LeftPanel extends LitElement {
                       </div>`;
                     })
                   : html`<div class="layout horizontal center no-task-item">
-                      No tasks in this project. <iron-icon class="mood-icon" icon="social:mood"></iron-icon>
+                      ${this.project_to_tasks_map?.get(project.uuid)?.length > 0
+                        ? this.page === '0'
+                          ? 'All tasks are done.'
+                          : 'All tasks are open.'
+                        : 'No tasks in this project.'}
+                      <iron-icon class="mood-icon" icon="social:mood"></iron-icon>
                     </div>`}
               </div>
             </div>

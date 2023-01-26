@@ -9,6 +9,8 @@ import '@polymer/iron-icons/maps-icons';
 import '@polymer/iron-icons/social-icons';
 import '@polymer/paper-icon-button/paper-icon-button';
 
+import '@dreamworld/dw-tooltip/dw-tooltip';
+
 import { api } from '../api';
 import { Pages, Team } from '../types';
 import { ui_helpers } from '../helpers';
@@ -56,8 +58,10 @@ export class LeftPanel extends LitElement {
     .left-panel-button:hover {
       color: black;
       opacity: 1;
+      width: 3.03rem;
+      height: 3.03rem;
     }
-    .left-panel-button[active] {
+    .button-container[active] > paper-icon-button {
       color: var(--theme-primary) !important;
       opacity: 1;
     }
@@ -75,13 +79,15 @@ export class LeftPanel extends LitElement {
         <iron-icon src="/assets/src/img/logo.png" style="width: 3rem; height: 3rem;"></iron-icon>
       </div>
       ${team_name.length > 0
-        ? html`<div class="layout vertical center-center team-name">${ui_helpers.add3Dots(team_name, 12)}</div>`
+        ? html`<div class="layout vertical center-center team-name unselectable">
+            ${ui_helpers.add3Dots(team_name, 12)}
+          </div>`
         : html``}
       <div class="flex"></div>
-      <div class="layout vertical center-center">
+      <div class="layout vertical center-center button-container" ?active=${this.page === 'projects'}>
         <paper-icon-button
+          id="projects-page"
           icon="folder"
-          ?active=${this.page === 'projects'}
           class="left-panel-button"
           @click=${() => {
             this.dispatchEvent(
@@ -91,12 +97,13 @@ export class LeftPanel extends LitElement {
             );
           }}
         ></paper-icon-button>
+        <dw-tooltip placement="right" offset="[0, 0]" for="projects-page" .content=${'Projects'}></dw-tooltip>
       </div>
       <div class="flex" style="flex: 0.10;"></div>
-      <div class="layout vertical center-center">
+      <div class="layout vertical center-center button-container" ?active=${this.page === 'statistics'}>
         <paper-icon-button
+          id="statistics-page"
           icon="trending-up"
-          ?active=${this.page === 'statistics'}
           class="left-panel-button"
           @click=${() => {
             this.dispatchEvent(
@@ -106,10 +113,12 @@ export class LeftPanel extends LitElement {
             );
           }}
         ></paper-icon-button>
+        <dw-tooltip placement="right" offset="[0, 0]" for="statistics-page" .content=${'Statistics'}></dw-tooltip>
       </div>
       <div class="flex"></div>
       <div class="layout vertical center-center">
         <paper-icon-button
+          id="switch-team"
           icon="social:group"
           class="left-panel-button"
           @click=${() => {
@@ -117,10 +126,12 @@ export class LeftPanel extends LitElement {
             location.reload();
           }}
         ></paper-icon-button>
+        <dw-tooltip placement="right" offset="[0, 0]" for="switch-team" .content=${'Switch team'}></dw-tooltip>
       </div>
       <div class="flex" style="flex: 0.015;"></div>
       <div class="layout vertical center-center">
         <paper-icon-button
+          id="sign-out"
           icon="maps:directions-walk"
           class="left-panel-button"
           @click=${() => {
@@ -130,6 +141,7 @@ export class LeftPanel extends LitElement {
             });
           }}
         ></paper-icon-button>
+        <dw-tooltip placement="right" offset="[0, 0]" for="sign-out" .content=${'Sign out'}></dw-tooltip>
       </div>
       <div class="flex" style="flex: 0.10;"></div>
     </div>`;

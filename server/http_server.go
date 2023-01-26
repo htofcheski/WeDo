@@ -504,7 +504,7 @@ func createTask(w http.ResponseWriter, r *http.Request) {
 		test = strings.Join(req.AssignedUsersUuids[:], ",")
 	}
 
-	_, err = DB.Queries.Exec(DB.postgre, "create-task", uuid, team.Index, test, req.Name, req.Description, req.Goal, now, now, 1)
+	_, err = DB.Queries.Exec(DB.postgre, "create-task", uuid, team.Index, test, req.Name, req.Description, req.Goal, now, now, req.State)
 	if err != nil {
 		boom.Internal(w, err.Error())
 		Log.Error("createTask: " + err.Error())

@@ -23,11 +23,23 @@ export interface UpdateProjectReq {
 }
 
 export interface CreateTaskReq {
+  project_uuid?: string;
   team_uuid: string;
   assigned_users_uuids?: string[];
   name: string;
   description?: string;
   goal?: string;
+  state: number;
+}
+
+export interface UpdateTaskReq {
+  task_uuid: string;
+  team_uuid: string;
+  assigned_users_uuids?: string[];
+  name: string;
+  description?: string;
+  goal?: string;
+  state: number;
 }
 
 export interface TeamTask {

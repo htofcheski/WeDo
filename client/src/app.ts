@@ -11,6 +11,8 @@ import {
   UpdateProjectReq,
   LoggedInUser,
   Pages,
+  CreateTaskReq,
+  UpdateTaskReq,
 } from './types';
 
 import { render } from 'lit-html';
@@ -28,6 +30,7 @@ import '@polymer/paper-icon-button/paper-icon-button';
 import '@vaadin/vaadin-combo-box/vaadin-combo-box';
 import '@vaadin/vaadin-dialog/vaadin-dialog';
 import '@vaadin/vaadin-text-field/vaadin-text-field';
+import '@vaadin/vaadin-text-field/vaadin-text-area';
 
 import '@vaadin/vaadin-button/vaadin-button';
 
@@ -93,6 +96,12 @@ export class WeDo extends LitElement {
 
   @property({ attribute: false })
   update_project_req: UpdateProjectReq = undefined;
+
+  @property({ attribute: false })
+  create_task_req: CreateTaskReq = undefined;
+
+  @property({ attribute: false })
+  update_task_req: UpdateTaskReq = undefined;
 
   @property({ attribute: false })
   dialog_opened: boolean = false;
@@ -216,10 +225,19 @@ export class WeDo extends LitElement {
                           console.log(e.detail.task_uuid);
                         }}
                         @createTaskForProject=${(e) => {
-                          console.log(e.detail.project_uuid);
+                          if (e.detail.project_uuid) {
+                            this.openDialog(this.taskDialogTemplate(e.detail.project_uuid));
+                          } else {
+                            this.openDialog(this.taskDialogTemplate());
+                          }
                         }}
                         @updateTask=${(e) => {
-                          console.log(e.detail.task_uuid);
+                          if (e.detail.task_uuid) {
+                            let task = this.team_tasks.find((task) => task.uuid === e.detail.task_uuid);
+                            if (task) {
+                              this.openDialog(this.taskDialogTemplate('', task));
+                            }
+                          }
                         }}
                         @updateProject=${(e) => {
                           this.dialog_type = e.detail.type;
@@ -265,7 +283,12 @@ export class WeDo extends LitElement {
                       console.log('view team...');
                     }}
                     @updateTask=${(e) => {
-                      console.log(e.detail.task_uuid);
+                      if (e.detail.task_uuid) {
+                        let task = this.team_tasks.find((task) => task.uuid === e.detail.task_uuid);
+                        if (task) {
+                          this.openDialog(this.taskDialogTemplate('', task));
+                        }
+                      }
                     }}
                   ></right-panel>
                 </div>
@@ -312,6 +335,8 @@ export class WeDo extends LitElement {
     if (_changedProperties.has('selected_team_uuid') && this.selected_team_uuid.length > 0) {
       this.resetCreateProjectReq();
       this.resetUpdateProjectReq();
+      this.resetCreateTaskReq();
+      this.resetUpdateTaskReq();
 
       api.teamState(this.selected_team_uuid).then((resp) => {
         this.team_state = this.rebuildTeamState(resp);
@@ -570,6 +595,35 @@ export class WeDo extends LitElement {
     );
   }
 
+  isCreateTaskReqValid(): boolean {
+    if (!this.create_task_req) {
+      return false;
+    }
+
+    return (
+      this.create_task_req?.team_uuid?.length > 0 &&
+      this.create_task_req?.team_uuid === this.selected_team_uuid &&
+      this.create_task_req?.name?.length > 0 &&
+      this.create_task_req?.state >= 0 &&
+      this.create_task_req?.state < 3
+    );
+  }
+
+  isUpdateTaskReqValid(): boolean {
+    if (!this.update_task_req) {
+      return false;
+    }
+
+    return (
+      this.update_task_req?.task_uuid?.length > 0 &&
+      this.update_task_req?.team_uuid?.length > 0 &&
+      this.update_task_req?.team_uuid === this.selected_team_uuid &&
+      this.update_task_req?.name?.length > 0 &&
+      this.update_task_req?.state >= 0 &&
+      this.update_task_req?.state < 3
+    );
+  }
+
   resetCreateProjectReq() {
     this.create_project_req = Object.assign(
       {},
@@ -810,6 +864,319 @@ export class WeDo extends LitElement {
                     });
                 } else {
                   ui_helpers.show_toast('error', 'Project creation failed, invalid request.');
+                }
+              }
+            }}
+            >Submit</vaadin-button
+          >
+        </div>
+      </div>`;
+  }
+
+  resetCreateTaskReq() {
+    this.create_task_req = Object.assign(
+      {},
+      {
+        project_uuid: '',
+        team_uuid: this.selected_team_uuid?.length > 0 ? this.selected_team_uuid : '',
+        assigned_users_uuids: [],
+        name: '',
+        description: '',
+        goal: '',
+        state: 0,
+      }
+    );
+  }
+
+  resetUpdateTaskReq() {
+    this.update_task_req = Object.assign(
+      {},
+      {
+        task_uuid: '',
+        team_uuid: this.selected_team_uuid?.length > 0 ? this.selected_team_uuid : '',
+        assigned_users_uuids: [],
+        name: '',
+        description: '',
+        goal: '',
+        state: 0,
+      }
+    );
+  }
+
+  taskDialogTemplate(existing_project_uuid?: string, existing?: TeamTask): TemplateResult {
+    const is_update = existing && existing?.uuid?.length > 0;
+
+    let selected_team_users = [];
+
+    if (is_update) {
+      this.update_task_req.task_uuid = existing.uuid;
+
+      let selected_team_users_uuids =
+        existing.assigned_users_uuids?.length > 0 ? existing.assigned_users_uuids.split(',') : [];
+
+      // find selected team users and append them to selectable team users array.
+      if (selected_team_users_uuids.length > 0) {
+        this.team_users.forEach((team_user) => {
+          if (selected_team_users_uuids.includes(team_user.uuid)) {
+            let org_user = this.team_to_org_user_map?.get(team_user.uuid);
+            let name = 'Unknown team user';
+            if (org_user?.uuid) {
+              name = org_user?.username + (org_user?.email ? ' (' + org_user.email + ')' : '');
+            }
+
+            selected_team_users = [
+              ...selected_team_users,
+              {
+                label: name,
+                value: team_user.uuid,
+              },
+            ];
+          }
+        });
+      }
+    } else {
+      if (existing_project_uuid) {
+        this.create_task_req.project_uuid = existing_project_uuid;
+      }
+    }
+
+    return html`<!-- Don't remove style tag, used to pass styles from main component -->
+      <style id="dialog-styles">
+        .container {
+          min-width: 70rem;
+          min-height: 35rem;
+        }
+        .dialog-header {
+          width: 100%;
+          font-weight: 500;
+          font-size: 1.1rem;
+          align-items: center;
+        }
+        vaadin-text-area {
+          min-height: 15rem;
+        }
+        .max-width {
+          width: 100%;
+        }
+        .button-row {
+          padding-top: 3rem;
+        }
+        .button-row > .s-button,
+        .button-row > .c-button {
+          width: 49%;
+          color: white;
+        }
+        .s-button {
+          background: var(--theme-primary);
+        }
+        .c-button {
+          background: var(--theme-secondary);
+        }
+        .third {
+          width: 33.33%;
+        }
+      </style>
+      <div class="layout vertical center container">
+        <div class="layout horizontal justified dialog-header">
+          <div>${is_update ? 'Update Task' : 'Create Task'}</div>
+          <div class="flex"></div>
+          <div>
+            <paper-icon-button
+              icon="close"
+              @click=${() => {
+                this.closeDialog();
+                if (is_update) {
+                  this.resetUpdateTaskReq();
+                } else {
+                  this.resetCreateTaskReq();
+                }
+              }}
+            ></paper-icon-button>
+          </div>
+        </div>
+        <div class="layout horizontal max-width">
+          <vaadin-text-field
+            required
+            class="max-width"
+            label="Name"
+            theme="purple"
+            value=${is_update ? existing?.name : ''}
+            @value-changed=${(e: any) => {
+              if (is_update) {
+                if (this.update_task_req) {
+                  this.update_task_req.name = e.detail.value;
+                }
+              } else {
+                if (this.create_task_req) {
+                  this.create_task_req.name = e.detail.value;
+                }
+              }
+            }}
+          ></vaadin-text-field>
+        </div>
+        <div class="layout horizontal max-width">
+          <vaadin-text-area
+            class="max-width"
+            label="Description"
+            theme="purple"
+            value=${is_update ? existing?.description : ''}
+            @value-changed=${(e: any) => {
+              if (is_update) {
+                if (this.update_task_req) {
+                  this.update_task_req.description = e.detail.value;
+                }
+              } else {
+                if (this.create_task_req) {
+                  this.create_task_req.description = e.detail.value;
+                }
+              }
+            }}
+          ></vaadin-text-area>
+        </div>
+        <div class="layout horizontal max-width">
+          <vaadin-text-field
+            class="max-width"
+            label="Goal"
+            theme="purple"
+            value=${is_update ? existing?.goal : ''}
+            @value-changed=${(e: any) => {
+              if (is_update) {
+                if (this.update_task_req) {
+                  this.update_task_req.goal = e.detail.value;
+                }
+              } else {
+                if (this.create_task_req) {
+                  this.create_task_req.goal = e.detail.value;
+                }
+              }
+            }}
+          ></vaadin-text-field>
+        </div>
+        <div class="layout horizontal max-width">
+          <multiselect-combo-box
+            class="max-width"
+            compact-mode
+            clear-button-visible
+            theme="purple"
+            @selected-items-changed=${(e) => {
+              if (is_update) {
+                if (this.update_task_req) {
+                  this.update_task_req.assigned_users_uuids = [].concat(
+                    e.detail.value.map((entry) => {
+                      return entry['value'];
+                    })
+                  );
+                }
+              } else {
+                if (this.create_task_req) {
+                  this.create_task_req.assigned_users_uuids = [].concat(
+                    e.detail.value.map((entry) => {
+                      return entry['value'];
+                    })
+                  );
+                }
+              }
+            }}
+            label="Assigned team users"
+            item-value-path="value"
+            item-id-path="value"
+            item-label-path="label"
+            .selectedItems=${selected_team_users}
+            .items=${this.team_users.map((team_user) => {
+              let org_user = this.team_to_org_user_map?.get(team_user.uuid);
+              let name = 'Unknown team user';
+              if (org_user?.uuid) {
+                name = org_user?.username + (org_user?.email ? ' (' + org_user.email + ')' : '');
+              }
+
+              return {
+                label: name,
+                value: team_user.uuid,
+              };
+            })}
+          ></multiselect-combo-box>
+        </div>
+        <div class="layout horizontal max-width">
+          <vaadin-combo-box
+            class="third"
+            label="State"
+            theme="purple"
+            value=${is_update ? existing?.state?.toString() : '0'}
+            .items=${[
+              { label: 'Open', value: '0' },
+              { label: 'Active', value: '1' },
+              { label: 'Done', value: '2' },
+            ]}
+            @selected-item-changed=${(e) => {
+              if (e?.detail?.value?.value) {
+                if (is_update) {
+                  if (this.update_task_req) {
+                    this.update_task_req.state = Number(e.detail.value.value);
+                  }
+                } else {
+                  if (this.create_task_req) {
+                    this.create_task_req.state = Number(e.detail.value.value);
+                  }
+                }
+              }
+            }}
+          ></vaadin-combo-box>
+        </div>
+        <div class="layout horizontal justified max-width button-row">
+          <vaadin-button
+            class="c-button"
+            @click=${() => {
+              this.closeDialog();
+              if (is_update) {
+                this.resetUpdateTaskReq();
+              } else {
+                this.resetCreateTaskReq();
+              }
+            }}
+            >Cancel</vaadin-button
+          >
+          <vaadin-button
+            class="s-button"
+            @click=${() => {
+              if (is_update) {
+                if (this.isUpdateTaskReqValid()) {
+                  api
+                    .updateTask(this.update_task_req)
+                    .then(() => {
+                      this.closeDialog();
+                      ui_helpers.show_toast(
+                        'success',
+                        'Task: ' + "'" + this.update_task_req.name + "'" + ' was successfully updated.'
+                      );
+                      this.resetUpdateTaskReq();
+                    })
+                    .catch(() => {
+                      this.closeDialog();
+                      ui_helpers.show_toast('error', 'Task modification failed.');
+                      this.resetUpdateTaskReq();
+                    });
+                } else {
+                  ui_helpers.show_toast('error', 'Task modification failed, invalid request.');
+                }
+              } else {
+                if (this.isCreateTaskReqValid()) {
+                  api
+                    .createTask(this.create_task_req)
+                    .then(() => {
+                      this.closeDialog();
+                      ui_helpers.show_toast(
+                        'success',
+                        'Task: ' + "'" + this.create_task_req.name + "'" + ' was successfully created.'
+                      );
+                      this.resetCreateTaskReq();
+                    })
+                    .catch(() => {
+                      this.closeDialog();
+                      ui_helpers.show_toast('error', 'Task creation failed.');
+                      this.resetCreateTaskReq();
+                    });
+                } else {
+                  ui_helpers.show_toast('error', 'Task creation failed, invalid request.');
                 }
               }
             }}
