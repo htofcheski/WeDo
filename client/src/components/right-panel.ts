@@ -78,7 +78,8 @@ export class RightPanel extends LitElement {
     }
     .user-icons {
       justify-content: center;
-      margin: 0.7rem 0;
+      margin: 0.94rem 0;
+      min-height: 2.55rem;
     }
     .dir-buttons {
       background-color: rgba(51, 51, 51, 0.05);
