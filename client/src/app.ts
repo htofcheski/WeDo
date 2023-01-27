@@ -31,6 +31,7 @@ import '@vaadin/vaadin-combo-box/vaadin-combo-box';
 import '@vaadin/vaadin-dialog/vaadin-dialog';
 import '@vaadin/vaadin-text-field/vaadin-text-field';
 import '@vaadin/vaadin-text-field/vaadin-text-area';
+import '@polymer/paper-toggle-button/paper-toggle-button';
 
 import '@vaadin/vaadin-button/vaadin-button';
 
@@ -89,9 +90,6 @@ export class WeDo extends LitElement {
   goal_to_tasks_map: Map<string, TeamTask[]> = new Map();
 
   @property({ attribute: false })
-  dialog_type: 'create-project' | 'update-project' | '' = '';
-
-  @property({ attribute: false })
   create_project_req: CreateProjectReq = undefined;
 
   @property({ attribute: false })
@@ -111,9 +109,6 @@ export class WeDo extends LitElement {
 
   @property()
   page: Pages = 'projects';
-
-  @property()
-  name = 'Hristijan Tofcheski';
 
   private dialog: any = undefined;
 
@@ -146,6 +141,25 @@ export class WeDo extends LitElement {
       z-index: 200000000000;
       font-weight: 500;
       font-size: 1.1rem;
+    }
+    .max-height {
+      height: 100%;
+    }
+    .max-width {
+      width: 100%;
+    }
+    .main-window-container {
+      width: 100%;
+      height: 90%;
+    }
+    .main-window-iron-pages-container {
+      width: 75%;
+      outline: 0.2rem solid #f2f3f5;
+      z-index: 999;
+      background: white;
+    }
+    .right-panel-container {
+      width: 25%;
     }
   `);
 
@@ -180,7 +194,7 @@ export class WeDo extends LitElement {
               </vaadin-button>
             </div>
           </paper-toast>
-          <div class="layout horizontal" style="height: 100%;">
+          <div class="layout horizontal max-height">
             <left-panel
               .page=${this.page}
               .selected_team_uuid=${this.selected_team_uuid}
@@ -191,22 +205,16 @@ export class WeDo extends LitElement {
                 }
               }}
             ></left-panel>
-            <div class="layout vertical" style="width: 100%;">
+            <div class="layout vertical max-width">
               <top-header
                 .page=${this.page}
                 .logged_in_user=${this.logged_in_user}
-                @openDialog=${(e) => {
-                  this.dialog_type = e.detail.type;
-                  if (this.dialog_type === 'create-project') {
-                    this.openDialog(this.projectDialogTemplate());
-                  }
+                @createProject=${() => {
+                  this.openDialog(this.projectDialogTemplate());
                 }}
               ></top-header>
-              <div class="layout horizontal" style="width: 100%; height: 90%">
-                <div
-                  class="layout horizontal"
-                  style="width: 75%;outline: 0.2rem solid #f2f3f5; z-index: 999; background: white;"
-                >
+              <div class="layout horizontal main-window-container">
+                <div class="layout horizontal main-window-iron-pages-container">
                   <iron-pages selected=${this.page} attr-for-selected="page">
                     <div class="wedo-page" page="projects">
                       <project-page
@@ -219,10 +227,14 @@ export class WeDo extends LitElement {
                         .project_to_tasks_map=${this.project_to_tasks_map}
                         .project_to_assigned_users_map=${this.project_to_assigned_users_map}
                         @deleteProject=${(e) => {
-                          console.log(e.detail.project_uuid);
+                          if (e.detail.project_uuid) {
+                            this.openDialog(this.deleteProjectOrTaskTemplate(e.detail.project_uuid, ''));
+                          }
                         }}
                         @deleteTask=${(e) => {
-                          console.log(e.detail.task_uuid);
+                          if (e.detail.task_uuid) {
+                            this.openDialog(this.deleteProjectOrTaskTemplate('', e.detail.task_uuid));
+                          }
                         }}
                         @createTaskForProject=${(e) => {
                           if (e.detail.project_uuid) {
@@ -240,8 +252,7 @@ export class WeDo extends LitElement {
                           }
                         }}
                         @updateProject=${(e) => {
-                          this.dialog_type = e.detail.type;
-                          if (this.dialog_type === 'update-project') {
+                          if (e.detail.project_uuid) {
                             let project = this.team_projects.find((project) => project.uuid === e.detail.project_uuid);
                             if (project) {
                               this.openDialog(this.projectDialogTemplate(project));
@@ -257,14 +268,19 @@ export class WeDo extends LitElement {
                             if (task_state === 2) {
                               task_state = -1;
                             }
-
-                            setTimeout(() => {
-                              ui_helpers.show_toast(
-                                'success',
-                                'Task: ' + "'" + task.name + "'" + ' was successfully updated.'
-                              );
-                              this.change_tasks_state_disabled = false;
-                            }, 2000);
+                            api
+                              .updateTasksState(task.uuid, task_state + 1)
+                              .then(() => {
+                                ui_helpers.show_toast(
+                                  'success',
+                                  'Task: ' + "'" + task.name + "'" + ' was successfully updated.'
+                                );
+                                this.change_tasks_state_disabled = false;
+                              })
+                              .catch(() => {
+                                ui_helpers.show_toast('error', 'Task modification failed.');
+                                this.change_tasks_state_disabled = false;
+                              });
                           } else {
                             this.change_tasks_state_disabled = false;
                           }
@@ -274,7 +290,7 @@ export class WeDo extends LitElement {
                     <div class="wedo-page" page="statistics"></div>
                   </iron-pages>
                 </div>
-                <div class="layout horizontal" style="width: 25%;">
+                <div class="layout horizontal right-panel-container">
                   <right-panel
                     .team_users=${this.team_users}
                     .team_to_org_user_map=${this.team_to_org_user_map}
@@ -1190,7 +1206,7 @@ export class WeDo extends LitElement {
     return html`<!-- Don't remove style tag, used to pass styles from main component -->
       <style id="dialog-styles">
         .container {
-          min-width: 20rem;
+          min-width: 25rem;
           min-height: 10rem;
           max-height: 40rem;
         }
@@ -1233,6 +1249,131 @@ export class WeDo extends LitElement {
             <div>${name}</div>
           </div>`;
         })}
+      </div>`;
+  }
+
+  deleteProjectOrTaskTemplate(project_uuid?: string, task_uuid?: string): TemplateResult {
+    let delete_project_tasks = false;
+    if (!project_uuid && !task_uuid) {
+      return html``;
+    }
+    let project: TeamProject = undefined;
+    let task: TeamTask = undefined;
+    if (project_uuid) {
+      project = this.team_projects.find((project) => project.uuid === project_uuid);
+    }
+    if (task_uuid) {
+      task = this.team_tasks.find((task) => task.uuid === task_uuid);
+    }
+
+    return html`<!-- Don't remove style tag, used to pass styles from main component -->
+      <style id="dialog-styles">
+        .container {
+          min-width: 25rem;
+          min-height: 10rem;
+          max-height: 25rem;
+        }
+        .dialog-header {
+          font-weight: 500;
+          font-size: 1.1rem;
+          align-items: center;
+          width: 100%;
+          margin-bottom: 1rem;
+        }
+        .max-width {
+          width: 100%;
+          min-height: 0.7rem;
+        }
+        .button-row {
+          padding-top: 3rem;
+        }
+        .button-row > .d-button,
+        .button-row > .c-button {
+          width: 49%;
+          color: white;
+        }
+        .d-button {
+          background: var(--theme-error);
+        }
+        .c-button {
+          background: var(--theme-secondary);
+        }
+        .delete-tasks {
+          --paper-toggle-button-checked-button-color: var(--theme-error);
+          --paper-toggle-button-checked-ink-color: var(--theme-error);
+          --paper-toggle-button-checked-bar-color: var(--theme-error);
+          font-size: 1.05rem;
+        }
+      </style>
+      <div class="layout vertical center container">
+        <div class="layout horizontal justified dialog-header">
+          <div>${project_uuid ? 'Delete project' : 'Delete task'}</div>
+          <div class="flex"></div>
+          <div>
+            <paper-icon-button
+              icon="close"
+              @click=${() => {
+                this.closeDialog();
+              }}
+            ></paper-icon-button>
+          </div>
+        </div>
+        ${project_uuid
+          ? html`<div class="layout horizontal justified max-width">
+              <paper-toggle-button
+                .checked=${delete_project_tasks}
+                @checked-changed=${(e) => {
+                  let checked = Boolean(e.detail.value);
+                  if (checked != delete_project_tasks) {
+                    delete_project_tasks = checked;
+                  }
+                }}
+                class="delete-tasks"
+                >Delete project tasks?</paper-toggle-button
+              >
+            </div>`
+          : html`<div class="layout horizontal justified max-width"></div>`}
+        <div class="layout horizontal justified max-width button-row">
+          <vaadin-button
+            class="c-button"
+            @click=${() => {
+              this.closeDialog();
+            }}
+            >Cancel</vaadin-button
+          >
+          <vaadin-button
+            class="d-button"
+            @click=${() => {
+              if (project_uuid) {
+                api
+                  .deleteProject(project_uuid, delete_project_tasks)
+                  .then(() => {
+                    this.closeDialog();
+                    ui_helpers.show_toast(
+                      'success',
+                      'Project: ' + "'" + project?.name + "'" + ' was successfully deleted.'
+                    );
+                  })
+                  .catch(() => {
+                    this.closeDialog();
+                    ui_helpers.show_toast('error', 'Project deletion failed.');
+                  });
+              } else if (task_uuid) {
+                api
+                  .deleteTask(task_uuid)
+                  .then(() => {
+                    this.closeDialog();
+                    ui_helpers.show_toast('success', 'Task: ' + "'" + task?.name + "'" + ' was successfully deleted.');
+                  })
+                  .catch(() => {
+                    this.closeDialog();
+                    ui_helpers.show_toast('error', 'Task deletion failed.');
+                  });
+              }
+            }}
+            >Delete</vaadin-button
+          >
+        </div>
       </div>`;
   }
 }

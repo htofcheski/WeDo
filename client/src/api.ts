@@ -63,11 +63,32 @@ export const api = {
     }).then(jsonResponse);
   },
 
+  deleteProject(project_uuid: string, delete_project_tasks: boolean): Promise<any> {
+    return fetch(`/api/v1/delete-project?project-uuid=${project_uuid}&delete-tasks=${delete_project_tasks}`, {
+      headers: json_headers,
+      method: 'POST',
+    }).then(jsonResponse);
+  },
+
+  deleteTask(task_uuid: string): Promise<any> {
+    return fetch(`/api/v1/delete-project?task-uuid=${task_uuid}`, {
+      headers: json_headers,
+      method: 'POST',
+    }).then(jsonResponse);
+  },
+
   createTask(req: CreateTaskReq): Promise<any> {
     return fetch('/api/v1/create-task', {
       headers: json_headers,
       method: 'POST',
       body: JSON.stringify(req),
+    }).then(jsonResponse);
+  },
+
+  updateTasksState(task_uuid: string, state: number): Promise<any> {
+    return fetch(`/api/v1/update-tasks-state?task-uuid=${task_uuid}&new-state=${state.toString()}`, {
+      headers: json_headers,
+      method: 'POST',
     }).then(jsonResponse);
   },
 

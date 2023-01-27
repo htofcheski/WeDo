@@ -393,7 +393,7 @@ export class LeftPanel extends LitElement {
                       } else {
                         this.dispatchEvent(
                           new CustomEvent('updateProject', {
-                            detail: { type: 'update-project', project_uuid: project.uuid },
+                            detail: { project_uuid: project.uuid },
                           })
                         );
                       }

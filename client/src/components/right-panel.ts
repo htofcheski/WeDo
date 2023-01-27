@@ -265,6 +265,7 @@ export class RightPanel extends LitElement {
     this.team_tasks
       ?.filter((team_task) => moment.utc(team_task?.updated).isAfter(moment_now_utc))
       .sort(ui_helpers.sortTeamTask)
+      .slice(0, 50)
       .forEach((team_task) => {
         recent_task_arr.push(
           html`

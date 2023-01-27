@@ -7,19 +7,35 @@ export interface Team {
   updated: string;
 }
 
-export interface CreateProjectReq {
-  team_uuid: string;
-  tasks_uuids?: string[];
-  name: string;
-  description?: string;
+export interface TeamUser {
+  uuid: string;
+  created: string;
+  updated: string;
 }
 
-export interface UpdateProjectReq {
-  project_uuid: string;
-  team_uuid: string;
-  tasks_uuids?: string[];
+export interface OrgUser {
+  uuid: string;
+  username: string;
+  email: string;
+  description: string;
+  profile_picture: string;
+  created: string;
+  updated: string;
+}
+
+export interface LoggedInUser extends OrgUser {
+  team_user_uuid: string;
+}
+
+export interface TeamTask {
+  uuid: string;
+  assigned_users_uuids: string;
   name: string;
-  description?: string;
+  description: string;
+  goal: string;
+  created: string;
+  updated: string;
+  state: number;
 }
 
 export interface CreateTaskReq {
@@ -42,17 +58,6 @@ export interface UpdateTaskReq {
   state: number;
 }
 
-export interface TeamTask {
-  uuid: string;
-  assigned_users_uuids: string;
-  name: string;
-  description: string;
-  goal: string;
-  created: string;
-  updated: string;
-  state: number;
-}
-
 export interface TeamProject {
   uuid: string;
   tasks_uuids: string;
@@ -62,20 +67,19 @@ export interface TeamProject {
   updated: string;
 }
 
-export interface TeamUser {
-  uuid: string;
-  created: string;
-  updated: string;
+export interface CreateProjectReq {
+  team_uuid: string;
+  tasks_uuids?: string[];
+  name: string;
+  description?: string;
 }
 
-export interface OrgUser {
-  uuid: string;
-  username: string;
-  email: string;
-  description: string;
-  profile_picture: string;
-  created: string;
-  updated: string;
+export interface UpdateProjectReq {
+  project_uuid: string;
+  team_uuid: string;
+  tasks_uuids?: string[];
+  name: string;
+  description?: string;
 }
 
 export interface TeamState {
@@ -84,8 +88,4 @@ export interface TeamState {
   team_to_org_user_map: Map<string, OrgUser>;
   team_projects: TeamProject[];
   team_tasks: TeamTask[];
-}
-
-export interface LoggedInUser extends OrgUser {
-  team_user_uuid: string;
 }

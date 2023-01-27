@@ -53,7 +53,7 @@ export class TopHeader extends LitElement {
           icon="add-circle"
           style="color: var(--theme-primary);"
           @click=${() => {
-            this.dispatchEvent(new CustomEvent('openDialog', { detail: { type: 'create-project' } }));
+            this.dispatchEvent(new CustomEvent('createProject', {}));
           }}
         ></paper-icon-button>
       </div>
