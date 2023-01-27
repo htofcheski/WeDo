@@ -280,7 +280,7 @@ export class WeDo extends LitElement {
                     .team_to_org_user_map=${this.team_to_org_user_map}
                     .team_tasks=${this.team_tasks}
                     @viewTeam=${() => {
-                      console.log('view team...');
+                      this.openDialog(this.viewTeamTemplate());
                     }}
                     @updateTask=${(e) => {
                       if (e.detail.task_uuid) {
@@ -1183,6 +1183,56 @@ export class WeDo extends LitElement {
             >Submit</vaadin-button
           >
         </div>
+      </div>`;
+  }
+
+  viewTeamTemplate(): TemplateResult {
+    return html`<!-- Don't remove style tag, used to pass styles from main component -->
+      <style id="dialog-styles">
+        .container {
+          min-width: 20rem;
+          min-height: 10rem;
+          max-height: 40rem;
+        }
+        .dialog-header {
+          font-weight: 500;
+          font-size: 1.1rem;
+          align-items: center;
+          width: 100%;
+          margin-bottom: 1rem;
+        }
+        .user-row {
+          width: 100%;
+          font-weight: 500;
+          padding: 0.5rem 1rem;
+        }
+      </style>
+      <div class="layout vertical center container">
+        <div class="layout horizontal justified dialog-header">
+          <div>Team</div>
+          <div class="flex"></div>
+          <div>
+            <paper-icon-button
+              icon="close"
+              @click=${() => {
+                this.closeDialog();
+              }}
+            ></paper-icon-button>
+          </div>
+        </div>
+        ${this.team_users.map((team_user) => {
+          let org_user = this.team_to_org_user_map?.get(team_user.uuid);
+          let name = 'Unknown team user';
+          if (org_user?.uuid) {
+            name = org_user?.username + (org_user?.email ? ' (' + org_user.email + ')' : '');
+          }
+
+          return html`<div class="layout horizontal center-center user-row">
+            <div>${ui_helpers.renderUser(org_user, team_user, true)}</div>
+            <div class="flex"></div>
+            <div>${name}</div>
+          </div>`;
+        })}
       </div>`;
   }
 }

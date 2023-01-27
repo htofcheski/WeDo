@@ -5,7 +5,6 @@ import { all } from '../styles/styles';
 import '@polymer/iron-image/iron-image';
 import '@polymer/iron-icon/iron-icon';
 import '@polymer/iron-icons/iron-icons';
-import '@polymer/iron-icons/maps-icons';
 import '@polymer/iron-icons/social-icons';
 import '@polymer/paper-icon-button/paper-icon-button';
 
@@ -87,7 +86,7 @@ export class LeftPanel extends LitElement {
       <div class="layout vertical center-center button-container" ?active=${this.page === 'projects'}>
         <paper-icon-button
           id="projects-page"
-          icon="folder"
+          icon="folder-open"
           class="left-panel-button"
           @click=${() => {
             this.dispatchEvent(
@@ -132,7 +131,8 @@ export class LeftPanel extends LitElement {
       <div class="layout vertical center-center">
         <paper-icon-button
           id="sign-out"
-          icon="maps:directions-walk"
+          icon="exit-to-app"
+          style="transform: scaleX(-1);"
           class="left-panel-button"
           @click=${() => {
             api.logout().then(() => {
