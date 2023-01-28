@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS task (
   goal text DEFAULT '',
   created timestamp DEFAULT now(),
   updated timestamp DEFAULT now(),
+  completed timestamp DEFAULT now(),
   state smallint DEFAULT 0,
   deleted_state smallint DEFAULT 0
 );

@@ -341,3 +341,91 @@ func teamStateForOrgUserTeam(team *Team) (TeamState, error) {
 
 	return team_state, nil
 }
+
+func createProjectFromReq(req CreateProjectReq) (*TeamProject, error) {
+	team := &Team{}
+	err := DB.postgre.Get(team, DB.QueriesRawMap["team-by-uuid"], _uuid.FromStringOrNil(req.TeamUuid))
+	if err != nil {
+		return &TeamProject{}, err
+	}
+	if !team.IsValid() {
+		return &TeamProject{}, errors.New("team is invalid")
+	}
+
+	uuid := _uuid.NewV4()
+	now := time.Now().UTC()
+	tasks_uuids := ""
+	if len(req.TasksUuids) > 0 {
+		tasks_uuids = strings.Join(req.TasksUuids[:], ",")
+	}
+
+	_, err = DB.Queries.Exec(DB.postgre, "create-project", uuid, team.Index, tasks_uuids, req.Name, req.Description, now, now)
+	if err != nil {
+		return &TeamProject{}, err
+	}
+
+	project := &TeamProject{}
+	err = DB.postgre.Get(project, DB.QueriesRawMap["project-by-uuid"], uuid, team.Index)
+	if err != nil {
+		return &TeamProject{}, err
+	}
+
+	return project, nil
+}
+
+func updateProjectFromReq(req UpdateProjectReq) (*TeamProject, error) {
+	team := &Team{}
+	err := DB.postgre.Get(team, DB.QueriesRawMap["team-by-uuid"], _uuid.FromStringOrNil(req.TeamUuid))
+	if err != nil {
+		return &TeamProject{}, err
+	}
+	if !team.IsValid() {
+		return &TeamProject{}, errors.New("team is invalid")
+	}
+
+	uuid := _uuid.FromStringOrNil(req.ProjectUuid)
+	now := time.Now().UTC()
+	tasks_uuids := ""
+	if len(req.TasksUuids) > 0 {
+		tasks_uuids = strings.Join(req.TasksUuids[:], ",")
+	}
+
+	_, err = DB.Queries.Exec(DB.postgre, "update-project", tasks_uuids, req.Name, req.Description, now, uuid, team.Index)
+	if err != nil {
+		return &TeamProject{}, err
+	}
+
+	project := &TeamProject{}
+	err = DB.postgre.Get(project, DB.QueriesRawMap["project-by-uuid"], uuid, team.Index)
+	if err != nil {
+		return &TeamProject{}, err
+	}
+
+	return project, nil
+}
+
+func delProject(project_uuid _uuid.UUID, team_uuid _uuid.UUID, delete_tasks bool) error {
+	team := &Team{}
+	err := DB.postgre.Get(team, DB.QueriesRawMap["team-by-uuid"], team_uuid)
+	if err != nil {
+		return err
+	}
+	if !team.IsValid() {
+		return errors.New("team is invalid")
+	}
+
+	project := &TeamProject{}
+	err = DB.postgre.Get(project, DB.QueriesRawMap["project-by-uuid"], project_uuid, team.Index)
+	if err != nil {
+		return err
+	}
+
+	now := time.Now().UTC()
+
+	_, err = DB.Queries.Exec(DB.postgre, "delete-project", now, project_uuid, team.Index)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

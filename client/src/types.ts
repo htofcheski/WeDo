@@ -35,6 +35,7 @@ export interface TeamTask {
   goal: string;
   created: string;
   updated: string;
+  completed: string;
   state: number;
 }
 

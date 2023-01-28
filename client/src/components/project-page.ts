@@ -351,7 +351,7 @@ export class LeftPanel extends LitElement {
         <!-- header-end -->
         <!-- projects -->
 
-        ${team_projects_filtered.map((project, index) => {
+        ${team_projects_filtered.sort(ui_helpers.sortTeamProject).map((project, index) => {
           let project_tasks = this.getProjectTeamTasks(project.uuid);
 
           return html`
@@ -443,7 +443,7 @@ export class LeftPanel extends LitElement {
                 style=${'height:' + this.calculateExtendedHeight(project.uuid)}
               >
                 ${project_tasks.length > 0
-                  ? project_tasks.map((task) => {
+                  ? project_tasks.sort(ui_helpers.sortTeamTask).map((task) => {
                       return html`<div class="layout horizontal center task-item">
                         <paper-icon-button
                           id="tooltip-${task.uuid}_task_state"
@@ -549,7 +549,7 @@ export class LeftPanel extends LitElement {
                 no-project
                 style=${'height: ' + (team_tasks_no_project_filtered.length * 5.5).toString() + 'rem;'}
               >
-                ${team_tasks_no_project_filtered.map((task) => {
+                ${team_tasks_no_project_filtered.sort(ui_helpers.sortTeamTask).map((task) => {
                   return html` <div class="layout horizontal center task-item">
                     <paper-icon-button
                       id="tooltip-${task.uuid}_task_state"

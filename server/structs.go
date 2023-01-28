@@ -10,8 +10,6 @@ import (
 	_uuid "github.com/satori/go.uuid"
 )
 
-//////////////////// Database-> ////////////////////
-
 type config struct {
 	*sync.RWMutex `yaml:"-"`
 
@@ -51,16 +49,10 @@ type Database struct {
 	QueriesRawMap map[string]string
 }
 
-//////////////////// <-Database ////////////////////
-
-//////////////////// Request-> ////////////////////
-
 type Request struct {
 	Base *http.Request
 	body []byte // Body bytes, read to this buffer when queried.
 }
-
-//////////////////// <-Request ////////////////////
 
 type State struct {
 	Icon       string
@@ -171,6 +163,14 @@ func (tul TeamUserList) TeamUserIndexes() []uint64 {
 	return indexes
 }
 
+type TeamState struct {
+	TeamUuid         _uuid.UUID          `json:"team_uuid"`
+	TeamUsers        TeamUserList        `json:"team_users"`
+	TeamToOrgUserMap map[string]*OrgUser `json:"team_to_org_user_map"`
+	TeamProjects     TeamProjectList     `json:"team_projects"`
+	TeamTasks        TeamTaskList        `json:"team_tasks"`
+}
+
 type TeamProject struct {
 	Index        uint64     `db:"index" json:"-"`
 	Uuid         _uuid.UUID `db:"uuid" json:"uuid"`
@@ -184,30 +184,6 @@ type TeamProject struct {
 }
 
 type TeamProjectList []*TeamProject
-
-type TeamTask struct {
-	Index              uint64     `db:"index" json:"-"`
-	Uuid               _uuid.UUID `db:"uuid" json:"uuid"`
-	TeamIndex          uint64     `db:"team_index" json:"-"`
-	AssignedUsersUuids string     `db:"assigned_users_uuids" json:"assigned_users_uuids"`
-	Name               string     `db:"name" json:"name"`
-	Description        string     `db:"description" json:"description"`
-	Goal               string     `db:"goal" json:"goal"`
-	Created            time.Time  `db:"created" json:"created"`
-	Updated            time.Time  `db:"updated" json:"updated"`
-	State              int        `db:"state" json:"state"`
-	DeletedState       int        `db:"deleted_state" json:"-"`
-}
-
-type TeamTaskList []*TeamTask
-
-type TeamState struct {
-	TeamUuid         _uuid.UUID          `json:"team_uuid"`
-	TeamUsers        TeamUserList        `json:"team_users"`
-	TeamToOrgUserMap map[string]*OrgUser `json:"team_to_org_user_map"`
-	TeamProjects     TeamProjectList     `json:"team_projects"`
-	TeamTasks        TeamTaskList        `json:"team_tasks"`
-}
 
 type CreateProjectReq struct {
 	TeamUuid    string   `json:"team_uuid"`
@@ -223,6 +199,23 @@ type UpdateProjectReq struct {
 	Name        string   `json:"name"`
 	Description string   `json:"description"`
 }
+
+type TeamTask struct {
+	Index              uint64     `db:"index" json:"-"`
+	Uuid               _uuid.UUID `db:"uuid" json:"uuid"`
+	TeamIndex          uint64     `db:"team_index" json:"-"`
+	AssignedUsersUuids string     `db:"assigned_users_uuids" json:"assigned_users_uuids"`
+	Name               string     `db:"name" json:"name"`
+	Description        string     `db:"description" json:"description"`
+	Goal               string     `db:"goal" json:"goal"`
+	Created            time.Time  `db:"created" json:"created"`
+	Updated            time.Time  `db:"updated" json:"updated"`
+	Completed          time.Time  `db:"completed" json:"completed"`
+	State              int        `db:"state" json:"state"`
+	DeletedState       int        `db:"deleted_state" json:"-"`
+}
+
+type TeamTaskList []*TeamTask
 
 type CreateTaskReq struct {
 	TeamUuid           string   `json:"team_uuid"`

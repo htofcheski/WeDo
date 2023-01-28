@@ -40,9 +40,14 @@ func RunHTTP() error {
 	router.HandleFunc("/api/v1/login", loginUser).Methods("GET")
 	router.HandleFunc("/api/v1/logout", logoutUser).Methods("GET")
 
-	router.HandleFunc("/api/v1/team-state", teamState).Methods("GET")
+	////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 	router.HandleFunc("/api/v1/create-project", createProject).Methods("POST")
 	router.HandleFunc("/api/v1/update-project", updateProject).Methods("POST")
+	router.HandleFunc("/api/v1/delete-project", deleteProject).Methods("POST")
+
+	router.HandleFunc("/api/v1/team-state", teamState).Methods("GET")
+
 	router.HandleFunc("/api/v1/create-task", createTask).Methods("POST")
 
 	ServeStatic(router, "../client")
@@ -400,79 +405,132 @@ func teamState(w http.ResponseWriter, r *http.Request) {
 
 func createProject(w http.ResponseWriter, r *http.Request) {
 	r_upgraded := UpgradeRequest(r)
+
 	req := CreateProjectReq{}
 	if err := r_upgraded.ReadBodyJSON(&req); err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	team := &Team{}
-	err := DB.postgre.Get(team, DB.QueriesRawMap["team-by-uuid"], _uuid.FromStringOrNil(req.TeamUuid))
-	if err != nil {
 		boom.Internal(w, err.Error())
 		Log.Error("createProject: " + err.Error())
 		return
 	}
-	if !team.IsValid() {
-		msg := "team is invalid"
-		boom.Internal(w, msg)
+
+	_, _, teams, _, err := apiUserState(r)
+	if err != nil {
+		boom.BadData(w, err.Error())
+		Log.Error("createProject: " + err.Error())
+		return
+	}
+
+	if len(req.TeamUuid) == 0 || len(req.Name) == 0 {
+		msg := "bad request"
+		boom.BadData(w, msg)
 		Log.Error("createProject: " + msg)
 		return
 	}
 
-	uuid := _uuid.NewV4()
-	now := time.Now().UTC()
-	test := ""
-	if len(req.TasksUuids) > 0 {
-		test = strings.Join(req.TasksUuids[:], ",")
+	team := teams.hasTeam(_uuid.FromStringOrNil(req.TeamUuid))
+	if team == nil {
+		msg := "no permission for team"
+		boom.BadData(w, msg)
+		Log.Error("createProject: " + msg)
+		return
 	}
 
-	_, err = DB.Queries.Exec(DB.postgre, "create-project", uuid, team.Index, test, req.Name, req.Description, now, now)
+	project, err := createProjectFromReq(req)
 	if err != nil {
-		boom.Internal(w, err.Error())
+		boom.BadData(w, err.Error())
 		Log.Error("createProject: " + err.Error())
 		return
 	}
 
-	writeJSONResponse(w, nil, http.StatusOK)
+	writeJSONResponse(w, project, http.StatusOK)
 }
 
 func updateProject(w http.ResponseWriter, r *http.Request) {
 	r_upgraded := UpgradeRequest(r)
+
 	req := UpdateProjectReq{}
 	if err := r_upgraded.ReadBodyJSON(&req); err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	team := &Team{}
-	err := DB.postgre.Get(team, DB.QueriesRawMap["team-by-uuid"], _uuid.FromStringOrNil(req.TeamUuid))
-	if err != nil {
 		boom.Internal(w, err.Error())
 		Log.Error("updateProject: " + err.Error())
 		return
 	}
-	if !team.IsValid() {
-		msg := "team is invalid"
-		boom.Internal(w, msg)
+
+	_, _, teams, _, err := apiUserState(r)
+	if err != nil {
+		boom.BadData(w, err.Error())
+		Log.Error("updateProject: " + err.Error())
+		return
+	}
+
+	if len(req.TeamUuid) == 0 || len(req.Name) == 0 || len(req.ProjectUuid) == 0 {
+		msg := "bad request"
+		boom.BadData(w, msg)
 		Log.Error("updateProject: " + msg)
 		return
 	}
 
-	now := time.Now().UTC()
-	test := ""
-	if len(req.TasksUuids) > 0 {
-		test = strings.Join(req.TasksUuids[:], ",")
+	team := teams.hasTeam(_uuid.FromStringOrNil(req.TeamUuid))
+	if team == nil {
+		msg := "no permission for team"
+		boom.BadData(w, msg)
+		Log.Error("updateProject: " + msg)
+		return
 	}
 
-	_, err = DB.Queries.Exec(DB.postgre, "update-project", test, req.Name, req.Description, now, req.ProjectUuid, team.Index)
+	project, err := updateProjectFromReq(req)
 	if err != nil {
-		boom.Internal(w, err.Error())
+		boom.BadData(w, err.Error())
 		Log.Error("updateProject: " + err.Error())
 		return
 	}
 
-	writeJSONResponse(w, nil, http.StatusOK)
+	writeJSONResponse(w, project, http.StatusOK)
+}
+
+func deleteProject(w http.ResponseWriter, r *http.Request) {
+	r_upgraded := UpgradeRequest(r)
+
+	project_uuid := _uuid.FromStringOrNil(r_upgraded.QueryOrDefault("project-uuid", ""))
+	if project_uuid == _uuid.Nil {
+		msg := "[project_uuid] missing or invalid"
+		boom.BadData(w, msg)
+		Log.Error("deleteProject: " + msg)
+		return
+	}
+
+	team_uuid := _uuid.FromStringOrNil(r_upgraded.QueryOrDefault("team-uuid", ""))
+	if team_uuid == _uuid.Nil {
+		msg := "[team_uuid] missing or invalid"
+		boom.BadData(w, msg)
+		Log.Error("deleteProject: " + msg)
+		return
+	}
+
+	delete_tasks := r_upgraded.QueryBoolDefault("delete-tasks", false)
+
+	_, _, teams, _, err := apiUserState(r)
+	if err != nil {
+		boom.BadData(w, err.Error())
+		Log.Error("deleteProject: " + err.Error())
+		return
+	}
+
+	team := teams.hasTeam(team_uuid)
+	if team == nil {
+		msg := "no permission for team"
+		boom.BadData(w, msg)
+		Log.Error("deleteProject: " + msg)
+		return
+	}
+
+	err = delProject(project_uuid, team_uuid, delete_tasks)
+	if err != nil {
+		boom.BadData(w, err.Error())
+		Log.Error("deleteProject: " + err.Error())
+		return
+	}
+
+	writeJSONResponse(w, project_uuid, http.StatusOK)
 }
 
 func createTask(w http.ResponseWriter, r *http.Request) {
@@ -504,7 +562,7 @@ func createTask(w http.ResponseWriter, r *http.Request) {
 		test = strings.Join(req.AssignedUsersUuids[:], ",")
 	}
 
-	_, err = DB.Queries.Exec(DB.postgre, "create-task", uuid, team.Index, test, req.Name, req.Description, req.Goal, now, now, req.State)
+	_, err = DB.Queries.Exec(DB.postgre, "create-task", uuid, team.Index, test, req.Name, req.Description, req.Goal, now, now, now, req.State)
 	if err != nil {
 		boom.Internal(w, err.Error())
 		Log.Error("createTask: " + err.Error())

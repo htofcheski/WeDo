@@ -360,7 +360,7 @@ export class WeDo extends LitElement {
         this.team_to_org_user_map = new Map(this.team_state.team_to_org_user_map);
         this.team_projects = this.team_state.team_projects?.length > 0 ? [].concat(this.team_state.team_projects) : [];
         this.team_tasks = this.team_state.team_tasks?.length > 0 ? [].concat(this.team_state.team_tasks) : [];
-        this.buildMapsFromTeamState();
+        this.rebuildMaps();
         this.buildLoggedInUser();
       });
     }
@@ -437,24 +437,20 @@ export class WeDo extends LitElement {
     }
   }
 
-  buildMapsFromTeamState() {
-    if (!this.team_state) {
-      return;
-    }
-
+  rebuildMaps() {
     let tasks_in_projects: string[] = [];
 
-    if (this.team_state?.team_projects && this.team_state?.team_tasks) {
+    if (this.team_projects?.length > 0 && this.team_tasks.length > 0) {
       let project_to_tasks_map: Map<string, TeamTask[]> = new Map();
       let project_to_assigned_users_map: Map<string, TeamUser[]> = new Map();
 
-      this.team_state.team_projects.forEach((project) => {
+      this.team_projects.forEach((project) => {
         let project_tasks_uuids = project.tasks_uuids?.length > 0 ? project.tasks_uuids.split(',') : [];
         let project_tasks_arr: TeamTask[] = [];
         let project_team_users_arr: TeamUser[] = [];
 
         for (let i = 0; i < project_tasks_uuids.length; i++) {
-          let task = this.team_state.team_tasks.find((task) => task.uuid === project_tasks_uuids[i]);
+          let task = this.team_tasks.find((task) => task.uuid === project_tasks_uuids[i]);
 
           if (task) {
             // removes duplicates (not allowed anyway).
@@ -463,12 +459,12 @@ export class WeDo extends LitElement {
               project_tasks_arr.push(task);
               tasks_in_projects.push(task.uuid);
 
-              if (this.team_state?.team_users) {
+              if (this.team_users?.length > 0) {
                 let project_assigned_users_uuids =
                   task.assigned_users_uuids?.length > 0 ? task.assigned_users_uuids.split(',') : [];
 
                 for (let j = 0; j < project_assigned_users_uuids.length; j++) {
-                  let team_user = this.team_state.team_users.find(
+                  let team_user = this.team_users.find(
                     (team_user) => team_user.uuid === project_assigned_users_uuids[j]
                   );
                   if (team_user) {
@@ -488,14 +484,14 @@ export class WeDo extends LitElement {
         project_to_assigned_users_map.set(project.uuid, project_team_users_arr);
       });
 
-      this.project_to_tasks_map = project_to_tasks_map;
-      this.project_to_assigned_users_map = project_to_assigned_users_map;
+      this.project_to_tasks_map = new Map(project_to_tasks_map);
+      this.project_to_assigned_users_map = new Map(project_to_assigned_users_map);
     }
 
-    if (this.team_state?.team_tasks) {
+    if (this.team_tasks.length > 0) {
       let goal_to_tasks_map: Map<string, TeamTask[]> = new Map();
       let team_tasks_no_project: TeamTask[] = [];
-      this.team_state.team_tasks.forEach((task) => {
+      this.team_tasks.forEach((task) => {
         if (tasks_in_projects.findIndex((task_in_proj) => task_in_proj === task.uuid) === -1) {
           team_tasks_no_project.push(task);
         }
@@ -507,8 +503,8 @@ export class WeDo extends LitElement {
         }
       });
 
-      this.team_tasks_no_project = team_tasks_no_project;
-      this.goal_to_tasks_map = goal_to_tasks_map;
+      this.team_tasks_no_project = team_tasks_no_project.length > 0 ? [].concat(team_tasks_no_project) : [];
+      this.goal_to_tasks_map = new Map(goal_to_tasks_map);
     }
   }
 
@@ -845,13 +841,19 @@ export class WeDo extends LitElement {
                 if (this.isUpdateProjectReqValid()) {
                   api
                     .updateProject(this.update_project_req)
-                    .then(() => {
+                    .then((updated_project) => {
                       this.closeDialog();
                       ui_helpers.show_toast(
                         'success',
                         'Project: ' + "'" + this.update_project_req.name + "'" + ' was successfully updated.'
                       );
                       this.resetUpdateProjectReq();
+
+                      // @note for future WS impl.
+                      this.team_projects = this.team_projects.map((project) =>
+                        project.uuid === updated_project.uuid ? updated_project : project
+                      );
+                      this.rebuildMaps();
                     })
                     .catch(() => {
                       this.closeDialog();
@@ -865,13 +867,17 @@ export class WeDo extends LitElement {
                 if (this.isCreateProjectReqValid()) {
                   api
                     .createProject(this.create_project_req)
-                    .then(() => {
+                    .then((created_project) => {
                       this.closeDialog();
                       ui_helpers.show_toast(
                         'success',
-                        'Project: ' + "'" + this.create_project_req.name + "'" + ' was successfully created.'
+                        'Project: ' + "'" + this.create_project_req?.name + "'" + ' was successfully created.'
                       );
                       this.resetCreateProjectReq();
+
+                      // @note for future WS impl.
+                      this.team_projects.push(created_project);
+                      this.rebuildMaps();
                     })
                     .catch(() => {
                       this.closeDialog();
@@ -1346,13 +1352,19 @@ export class WeDo extends LitElement {
             @click=${() => {
               if (project_uuid) {
                 api
-                  .deleteProject(project_uuid, delete_project_tasks)
+                  .deleteProject(project_uuid, this.selected_team_uuid, delete_project_tasks)
                   .then(() => {
                     this.closeDialog();
                     ui_helpers.show_toast(
                       'success',
                       'Project: ' + "'" + project?.name + "'" + ' was successfully deleted.'
                     );
+
+                    // @note for future WS impl.
+                    this.team_projects = this.team_projects.filter(
+                      (team_project) => team_project.uuid !== project_uuid
+                    );
+                    this.rebuildMaps();
                   })
                   .catch(() => {
                     this.closeDialog();

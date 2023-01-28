@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 )
 
 func UpgradeRequest(r *http.Request) *Request {
@@ -14,6 +15,14 @@ func UpgradeRequest(r *http.Request) *Request {
 func (r *Request) QueryOrDefault(key, _default string) string {
 	if value := r.Base.URL.Query().Get(key); len(value) > 0 {
 		return value
+	}
+	return _default
+}
+
+func (r *Request) QueryBoolDefault(key string, _default bool) bool {
+	str := strings.ToLower(r.Base.URL.Query().Get(key))
+	if len(str) > 0 {
+		return str == "true" || str == "1"
 	}
 	return _default
 }

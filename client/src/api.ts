@@ -1,4 +1,4 @@
-import { CreateProjectReq, CreateTaskReq, TeamState, UpdateProjectReq, UpdateTaskReq } from './types';
+import { CreateProjectReq, CreateTaskReq, TeamProject, TeamState, UpdateProjectReq, UpdateTaskReq } from './types';
 
 const json_headers = Object.assign(
   {},
@@ -43,31 +43,34 @@ export const api = {
       headers: json_headers,
     }).then(jsonResponse);
   },
-  teamState(team_uuid: string): Promise<TeamState> {
-    return fetch(`/api/v1/team-state${this.query({ team_uuid: team_uuid })}`, { headers: json_headers }).then(
-      jsonResponse
-    );
-  },
-  createProject(req: CreateProjectReq): Promise<any> {
+  createProject(req: CreateProjectReq): Promise<TeamProject> {
     return fetch('/api/v1/create-project', {
       headers: json_headers,
       method: 'POST',
       body: JSON.stringify(req),
     }).then(jsonResponse);
   },
-  updateProject(req: UpdateProjectReq): Promise<any> {
+  updateProject(req: UpdateProjectReq): Promise<TeamProject> {
     return fetch('/api/v1/update-project', {
       headers: json_headers,
       method: 'POST',
       body: JSON.stringify(req),
     }).then(jsonResponse);
   },
+  deleteProject(project_uuid: string, team_uuid: string, delete_project_tasks: boolean): Promise<any> {
+    return fetch(
+      `/api/v1/delete-project?project-uuid=${project_uuid}&team-uuid=${team_uuid}&delete-tasks=${delete_project_tasks}`,
+      {
+        headers: json_headers,
+        method: 'POST',
+      }
+    ).then(jsonResponse);
+  },
 
-  deleteProject(project_uuid: string, delete_project_tasks: boolean): Promise<any> {
-    return fetch(`/api/v1/delete-project?project-uuid=${project_uuid}&delete-tasks=${delete_project_tasks}`, {
-      headers: json_headers,
-      method: 'POST',
-    }).then(jsonResponse);
+  teamState(team_uuid: string): Promise<TeamState> {
+    return fetch(`/api/v1/team-state${this.query({ team_uuid: team_uuid })}`, { headers: json_headers }).then(
+      jsonResponse
+    );
   },
 
   deleteTask(task_uuid: string): Promise<any> {

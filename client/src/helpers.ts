@@ -1,7 +1,7 @@
 import { PaperToastElement } from '@polymer/paper-toast';
 import { html, TemplateResult } from 'lit-element';
 import randomColor = require('randomcolor');
-import { OrgUser, TeamTask, TeamUser } from './types';
+import { OrgUser, TeamProject, TeamTask, TeamUser } from './types';
 
 import moment = require('moment');
 
@@ -108,6 +108,22 @@ export const ui_helpers = {
   },
 
   sortTeamTask(a: TeamTask, b: TeamTask): number {
+    let a_comp = a.updated || a.created;
+    let b_comp = b.updated || b.created;
+    if (!a_comp || !b_comp) {
+      return 0;
+    }
+
+    if (moment.utc(a_comp).isAfter(moment.utc(b_comp))) {
+      return -1;
+    }
+    if (moment.utc(a_comp).isBefore(moment.utc(b_comp))) {
+      return 1;
+    }
+    return 0;
+  },
+
+  sortTeamProject(a: TeamProject, b: TeamProject): number {
     let a_comp = a.updated || a.created;
     let b_comp = b.updated || b.created;
     if (!a_comp || !b_comp) {
