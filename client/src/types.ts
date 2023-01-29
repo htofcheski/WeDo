@@ -39,6 +39,11 @@ export interface TeamTask {
   state: number;
 }
 
+export interface TeamTaskForProject {
+  task: TeamTask;
+  project: TeamProject;
+}
+
 export interface CreateTaskReq {
   project_uuid?: string;
   team_uuid: string;

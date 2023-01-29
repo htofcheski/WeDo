@@ -3,10 +3,8 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"html/template"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/darahayes/go-boom"
@@ -27,28 +25,24 @@ func ServeStatic(router *mux.Router, staticDirectory string) {
 
 func RunHTTP() error {
 	router := mux.NewRouter()
-
-	/// Not accessible from front end, used to create stuff that is outside of the scope of this project. ///
-
+	////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Not accessible from front end, used to create stuff that is outside of the scope of this project. //
 	router.HandleFunc("/api/v1/create-organization", createOrganization).Methods("GET")
 	router.HandleFunc("/api/v1/create-organization-user", createOrganizationUser).Methods("GET")
 	router.HandleFunc("/api/v1/create-team", createTeam).Methods("GET")
 	router.HandleFunc("/api/v1/create-team-user", createTeamUser).Methods("GET")
-
 	////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 	router.HandleFunc("/api/v1/login", loginUser).Methods("GET")
+	router.HandleFunc("/api/v1/team-state", teamState).Methods("GET")
 	router.HandleFunc("/api/v1/logout", logoutUser).Methods("GET")
-
 	////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 	router.HandleFunc("/api/v1/create-project", createProject).Methods("POST")
 	router.HandleFunc("/api/v1/update-project", updateProject).Methods("POST")
 	router.HandleFunc("/api/v1/delete-project", deleteProject).Methods("POST")
-
-	router.HandleFunc("/api/v1/team-state", teamState).Methods("GET")
-
+	////////////////////////////////////////////////////////////////////////////////////////////////////////
 	router.HandleFunc("/api/v1/create-task", createTask).Methods("POST")
+	router.HandleFunc("/api/v1/update-task", updateTask).Methods("POST")
+	router.HandleFunc("/api/v1/delete-task", deleteTask).Methods("POST")
 
 	ServeStatic(router, "../client")
 
@@ -535,41 +529,130 @@ func deleteProject(w http.ResponseWriter, r *http.Request) {
 
 func createTask(w http.ResponseWriter, r *http.Request) {
 	r_upgraded := UpgradeRequest(r)
+
 	req := CreateTaskReq{}
 	if err := r_upgraded.ReadBodyJSON(&req); err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	team := &Team{}
-	err := DB.postgre.Get(team, DB.QueriesRawMap["team-by-uuid"], _uuid.FromStringOrNil(req.TeamUuid))
-	if err != nil {
 		boom.Internal(w, err.Error())
 		Log.Error("createTask: " + err.Error())
 		return
 	}
-	if !team.IsValid() {
-		msg := "team is invalid"
-		boom.Internal(w, msg)
+
+	_, _, teams, _, err := apiUserState(r)
+	if err != nil {
+		boom.BadData(w, err.Error())
+		Log.Error("createTask: " + err.Error())
+		return
+	}
+
+	if len(req.TeamUuid) == 0 || len(req.Name) == 0 || req.State < 0 || req.State > 2 {
+		msg := "bad request"
+		boom.BadData(w, msg)
 		Log.Error("createTask: " + msg)
 		return
 	}
 
-	uuid := _uuid.NewV4()
-	now := time.Now().UTC()
-	test := ""
-	if len(req.AssignedUsersUuids) > 0 {
-		test = strings.Join(req.AssignedUsersUuids[:], ",")
+	team := teams.hasTeam(_uuid.FromStringOrNil(req.TeamUuid))
+	if team == nil {
+		msg := "no permission for team"
+		boom.BadData(w, msg)
+		Log.Error("createTask: " + msg)
+		return
 	}
 
-	_, err = DB.Queries.Exec(DB.postgre, "create-task", uuid, team.Index, test, req.Name, req.Description, req.Goal, now, now, now, req.State)
+	task, project, err := createTaskFromReq(req)
 	if err != nil {
-		boom.Internal(w, err.Error())
+		boom.BadData(w, err.Error())
 		Log.Error("createTask: " + err.Error())
 		return
 	}
 
-	writeJSONResponse(w, nil, http.StatusOK)
+	writeJSONResponse(w, &TeamTaskForProject{Task: *task, Project: *project}, http.StatusOK)
+}
+
+func updateTask(w http.ResponseWriter, r *http.Request) {
+	r_upgraded := UpgradeRequest(r)
+
+	req := UpdateTaskReq{}
+	if err := r_upgraded.ReadBodyJSON(&req); err != nil {
+		boom.Internal(w, err.Error())
+		Log.Error("updateTask: " + err.Error())
+		return
+	}
+
+	_, _, teams, _, err := apiUserState(r)
+	if err != nil {
+		boom.BadData(w, err.Error())
+		Log.Error("updateTask: " + err.Error())
+		return
+	}
+
+	if len(req.TaskUuid) == 0 || len(req.TeamUuid) == 0 || len(req.Name) == 0 || req.State < 0 || req.State > 2 {
+		msg := "bad request"
+		boom.BadData(w, msg)
+		Log.Error("updateTask: " + msg)
+		return
+	}
+
+	team := teams.hasTeam(_uuid.FromStringOrNil(req.TeamUuid))
+	if team == nil {
+		msg := "no permission for team"
+		boom.BadData(w, msg)
+		Log.Error("updateTask: " + msg)
+		return
+	}
+
+	task, err := updateTaskFromReq(req)
+	if err != nil {
+		boom.BadData(w, err.Error())
+		Log.Error("updateTask: " + err.Error())
+		return
+	}
+
+	writeJSONResponse(w, task, http.StatusOK)
+}
+
+func deleteTask(w http.ResponseWriter, r *http.Request) {
+	r_upgraded := UpgradeRequest(r)
+
+	task_uuid := _uuid.FromStringOrNil(r_upgraded.QueryOrDefault("task-uuid", ""))
+	if task_uuid == _uuid.Nil {
+		msg := "[task_uuid] missing or invalid"
+		boom.BadData(w, msg)
+		Log.Error("deleteTask: " + msg)
+		return
+	}
+
+	team_uuid := _uuid.FromStringOrNil(r_upgraded.QueryOrDefault("team-uuid", ""))
+	if team_uuid == _uuid.Nil {
+		msg := "[team_uuid] missing or invalid"
+		boom.BadData(w, msg)
+		Log.Error("deleteTask: " + msg)
+		return
+	}
+
+	_, _, teams, _, err := apiUserState(r)
+	if err != nil {
+		boom.BadData(w, err.Error())
+		Log.Error("deleteTask: " + err.Error())
+		return
+	}
+
+	team := teams.hasTeam(team_uuid)
+	if team == nil {
+		msg := "no permission for team"
+		boom.BadData(w, msg)
+		Log.Error("deleteTask: " + msg)
+		return
+	}
+
+	err = delTask(task_uuid, team_uuid)
+	if err != nil {
+		boom.BadData(w, err.Error())
+		Log.Error("deleteTask: " + err.Error())
+		return
+	}
+
+	writeJSONResponse(w, task_uuid, http.StatusOK)
 }
 
 func writeJSONResponse(w http.ResponseWriter, data interface{}, status int) {

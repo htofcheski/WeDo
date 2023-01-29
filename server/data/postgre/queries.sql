@@ -28,6 +28,9 @@ SELECT index, uuid, team_index, user_index, created, updated, deleted_state FROM
 -- name: team-users-by-team-index
 SELECT index, uuid, team_index, user_index, created, updated, deleted_state FROM team_user WHERE team_index = $1 AND deleted_state = 0;
 
+-- name: teams-users-by-users-uuids
+SELECT index, uuid, team_index, user_index, created, updated, deleted_state FROM team_user WHERE uuid IN (?) AND deleted_state = 0;
+
 -- name: create-organization-user
 INSERT INTO org_user(uuid, org_index, username, password, email, description, profile_picture, created, updated) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
 
@@ -56,7 +59,19 @@ INSERT INTO project(uuid, team_index, tasks_uuids, name, description, created, u
 UPDATE project SET tasks_uuids = $1, name = $2, description = $3, updated = $4 WHERE uuid = $5 AND team_index = $6;
 
 -- name: delete-project
-UPDATE project SET updated = $1, deleted_state = 1 WHERE uuid = $2 AND team_index = $3;
+UPDATE project SET updated = $1, deleted_state = 1 WHERE uuid = $2 AND team_index = $3 AND deleted_state = 0;
 
 -- name: create-task
 INSERT INTO task(uuid, team_index, assigned_users_uuids, name, description, goal, created, updated, completed, state) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
+
+-- name: update-task
+UPDATE task SET assigned_users_uuids = $1, name = $2, description = $3, goal = $4, updated = $5, completed = $6, state = $7 WHERE uuid = $8 AND team_index = $9;
+
+-- name: tasks-by-uuids
+SELECT index, uuid, team_index, assigned_users_uuids, name, description, goal, created, updated, completed, state, deleted_state FROM task WHERE uuid IN (?) AND deleted_state = 0;
+
+-- name: task-by-uuid
+SELECT index, uuid, team_index, assigned_users_uuids, name, description, goal, created, updated, completed, state, deleted_state FROM task WHERE uuid = $1 AND team_index = $2 AND deleted_state = 0;
+
+-- name: delete-task
+UPDATE task SET updated = $1, deleted_state = 1 WHERE uuid = $2 AND team_index = $3 AND deleted_state = 0;

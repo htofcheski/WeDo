@@ -420,9 +420,237 @@ func delProject(project_uuid _uuid.UUID, team_uuid _uuid.UUID, delete_tasks bool
 		return err
 	}
 
+	task_uuids_str := []string{}
+	if len(project.TasksUuids) > 0 {
+		task_uuids_str = strings.Split(project.TasksUuids, ",")
+	}
+
+	tx := DB.postgre.MustBegin()
 	now := time.Now().UTC()
 
-	_, err = DB.Queries.Exec(DB.postgre, "delete-project", now, project_uuid, team.Index)
+	_, err = tx.Exec(DB.QueriesRawMap["delete-project"], now, project_uuid, team.Index)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if len(task_uuids_str) > 0 && delete_tasks {
+		task_uuids := []_uuid.UUID{}
+		for _, task_uuid_str := range task_uuids_str {
+			task_uuids = append(task_uuids, _uuid.FromStringOrNil(task_uuid_str))
+		}
+
+		tasks := TeamTaskList{}
+		in_query, args, err := sqlx.In(DB.QueriesRawMap["tasks-by-uuids"], task_uuids)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+		err = tx.Select(&tasks, tx.Rebind(in_query), args...)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+
+		if len(task_uuids) != len(tasks) {
+			tx.Rollback()
+			return errors.New("project has some invalid tasks")
+		}
+		for _, task := range tasks {
+			if task.TeamIndex != team.Index {
+				tx.Rollback()
+				return errors.New("some tasks have a diff team than logged in user")
+			}
+
+			_, err = tx.Exec(DB.QueriesRawMap["delete-task"], now, task.Uuid, team.Index)
+			if err != nil {
+				tx.Rollback()
+				return err
+			}
+		}
+	}
+
+	return tx.Commit()
+}
+
+func createTaskFromReq(req CreateTaskReq) (*TeamTask, *TeamProject, error) {
+	tx := DB.postgre.MustBegin()
+	team := &Team{}
+	err := tx.Get(team, DB.QueriesRawMap["team-by-uuid"], _uuid.FromStringOrNil(req.TeamUuid))
+	if err != nil {
+		return &TeamTask{}, &TeamProject{}, err
+	}
+	if !team.IsValid() {
+		return &TeamTask{}, &TeamProject{}, errors.New("team is invalid")
+	}
+
+	uuid := _uuid.NewV4()
+	now := time.Now().UTC()
+	assigned_users_uuids_str := ""
+	assigned_users_uuids := []_uuid.UUID{}
+	if len(req.AssignedUsersUuids) > 0 {
+		assigned_users_uuids_str = strings.Join(req.AssignedUsersUuids[:], ",")
+
+		for _, user_uuid := range req.AssignedUsersUuids {
+			assigned_users_uuids = append(assigned_users_uuids, _uuid.FromStringOrNil(user_uuid))
+		}
+	}
+
+	if len(assigned_users_uuids) > 0 {
+		team_users := TeamUserList{}
+		in_query, args, err := sqlx.In(DB.QueriesRawMap["teams-users-by-users-uuids"], assigned_users_uuids)
+		if err != nil {
+			return &TeamTask{}, &TeamProject{}, err
+		}
+		err = tx.Select(&team_users, tx.Rebind(in_query), args...)
+		if err != nil {
+			return &TeamTask{}, &TeamProject{}, err
+		}
+
+		if len(assigned_users_uuids) != len(team_users) {
+			return &TeamTask{}, &TeamProject{}, errors.New("task has some invalid team users")
+		}
+
+		for _, team_user := range team_users {
+			if team_user.TeamIndex != team.Index {
+				return &TeamTask{}, &TeamProject{}, errors.New("some team users have a diff team than logged in user")
+			}
+		}
+	}
+
+	_, err = tx.Exec(DB.QueriesRawMap["create-task"], uuid, team.Index, assigned_users_uuids_str, req.Name, req.Description, req.Goal, now, now, now, req.State)
+	if err != nil {
+		return &TeamTask{}, &TeamProject{}, err
+	}
+
+	if len(req.ProjectUuid) > 0 {
+		project := &TeamProject{}
+		err = tx.Get(project, DB.QueriesRawMap["project-by-uuid"], _uuid.FromStringOrNil(req.ProjectUuid), team.Index)
+		if err != nil {
+			return &TeamTask{}, &TeamProject{}, err
+		}
+
+		tasks_uuids := []string{}
+		tasks_uuids_str := ""
+		if len(project.TasksUuids) > 0 {
+			tasks_uuids = strings.Split(project.TasksUuids, ",")
+			tasks_uuids = append(tasks_uuids, uuid.String())
+			tasks_uuids_str = strings.Join(tasks_uuids[:], ",")
+		}
+
+		_, err = tx.Exec(DB.QueriesRawMap["update-project"], tasks_uuids_str, project.Name, project.Description, now, project.Uuid, team.Index)
+		if err != nil {
+			return &TeamTask{}, &TeamProject{}, err
+		}
+	}
+
+	task := &TeamTask{}
+	err = tx.Get(task, DB.QueriesRawMap["task-by-uuid"], uuid, team.Index)
+	if err != nil {
+		return &TeamTask{}, &TeamProject{}, err
+	}
+
+	project := &TeamProject{}
+	if len(req.ProjectUuid) > 0 {
+		err = tx.Get(project, DB.QueriesRawMap["project-by-uuid"], _uuid.FromStringOrNil(req.ProjectUuid), team.Index)
+		if err != nil {
+			return &TeamTask{}, &TeamProject{}, err
+		}
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return &TeamTask{}, &TeamProject{}, err
+	}
+
+	return task, project, nil
+}
+
+func updateTaskFromReq(req UpdateTaskReq) (*TeamTask, error) {
+	team := &Team{}
+	err := DB.postgre.Get(team, DB.QueriesRawMap["team-by-uuid"], _uuid.FromStringOrNil(req.TeamUuid))
+	if err != nil {
+		return &TeamTask{}, err
+	}
+	if !team.IsValid() {
+		return &TeamTask{}, errors.New("team is invalid")
+	}
+
+	now := time.Now().UTC()
+	assigned_users_uuids_str := ""
+	assigned_users_uuids := []_uuid.UUID{}
+	if len(req.AssignedUsersUuids) > 0 {
+		assigned_users_uuids_str = strings.Join(req.AssignedUsersUuids[:], ",")
+
+		for _, user_uuid := range req.AssignedUsersUuids {
+			assigned_users_uuids = append(assigned_users_uuids, _uuid.FromStringOrNil(user_uuid))
+		}
+	}
+
+	if len(assigned_users_uuids) > 0 {
+		team_users := TeamUserList{}
+		in_query, args, err := sqlx.In(DB.QueriesRawMap["teams-users-by-users-uuids"], assigned_users_uuids)
+		if err != nil {
+			return &TeamTask{}, err
+		}
+		err = DB.postgre.Select(&team_users, DB.postgre.Rebind(in_query), args...)
+		if err != nil {
+			return &TeamTask{}, err
+		}
+
+		if len(assigned_users_uuids) != len(team_users) {
+			return &TeamTask{}, errors.New("task has some invalid team users")
+		}
+
+		for _, team_user := range team_users {
+			if team_user.TeamIndex != team.Index {
+				return &TeamTask{}, errors.New("some team users have a diff team than logged in user")
+			}
+		}
+	}
+	task_before := &TeamTask{}
+	err = DB.postgre.Get(task_before, DB.QueriesRawMap["task-by-uuid"], _uuid.FromStringOrNil(req.TaskUuid), team.Index)
+	if err != nil {
+		return &TeamTask{}, err
+	}
+
+	completed_timestamp := task_before.Completed
+	if req.State != task_before.State && req.State == 2 {
+		completed_timestamp = now
+	}
+
+	_, err = DB.postgre.Exec(DB.QueriesRawMap["update-task"], assigned_users_uuids_str, req.Name, req.Description, req.Goal, now, completed_timestamp, req.State, _uuid.FromStringOrNil(req.TaskUuid), team.Index)
+	if err != nil {
+		return &TeamTask{}, err
+	}
+
+	task_after := &TeamTask{}
+	err = DB.postgre.Get(task_after, DB.QueriesRawMap["task-by-uuid"], _uuid.FromStringOrNil(req.TaskUuid), team.Index)
+	if err != nil {
+		return &TeamTask{}, err
+	}
+
+	return task_after, nil
+}
+
+func delTask(task_uuid _uuid.UUID, team_uuid _uuid.UUID) error {
+	team := &Team{}
+	err := DB.postgre.Get(team, DB.QueriesRawMap["team-by-uuid"], team_uuid)
+	if err != nil {
+		return err
+	}
+	if !team.IsValid() {
+		return errors.New("team is invalid")
+	}
+
+	task := &TeamTask{}
+	err = DB.postgre.Get(task, DB.QueriesRawMap["task-by-uuid"], task_uuid, team.Index)
+	if err != nil {
+		return err
+	}
+
+	now := time.Now().UTC()
+	_, err = DB.postgre.Exec(DB.QueriesRawMap["delete-task"], now, task_uuid, team.Index)
 	if err != nil {
 		return err
 	}

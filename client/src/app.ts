@@ -180,6 +180,16 @@ export class WeDo extends LitElement {
               </style>
             </template>
           </dom-module>
+          <dom-module id="vaadin-combo-box-overlay-styles" theme-for="vaadin-combo-box-overlay">
+            <template>
+              <style>
+                :host {
+                  z-index: 900000000000;
+                  width: var(--vaadin-combo-box-overlay-width, var(--_vaadin-combo-box-overlay-default-width, auto));
+                }
+              </style>
+            </template>
+          </dom-module>
           <paper-toast id="toast">
             <div class="layout horizontal center-center">
               <vaadin-button
@@ -223,6 +233,7 @@ export class WeDo extends LitElement {
                         .team_users=${this.team_users}
                         .team_to_org_user_map=${this.team_to_org_user_map}
                         .team_tasks_no_project=${this.team_tasks_no_project}
+                        .goal_to_tasks_map=${this.goal_to_tasks_map}
                         .team_projects=${this.team_projects}
                         .project_to_tasks_map=${this.project_to_tasks_map}
                         .project_to_assigned_users_map=${this.project_to_assigned_users_map}
@@ -315,6 +326,9 @@ export class WeDo extends LitElement {
       : html` ${this.available_teams.length > 0
           ? html` <div class="center-div">
               <vaadin-combo-box
+                @opened-changed=${(e) => {
+                  console.log('AAA');
+                }}
                 class="team-selector"
                 placeholder="Select team"
                 .items=${this.available_teams.map((team) => {
@@ -876,7 +890,7 @@ export class WeDo extends LitElement {
                       this.resetCreateProjectReq();
 
                       // @note for future WS impl.
-                      this.team_projects.push(created_project);
+                      this.team_projects = this.team_projects.concat(created_project);
                       this.rebuildMaps();
                     })
                     .catch(() => {
@@ -1164,13 +1178,19 @@ export class WeDo extends LitElement {
                 if (this.isUpdateTaskReqValid()) {
                   api
                     .updateTask(this.update_task_req)
-                    .then(() => {
+                    .then((updated_task) => {
                       this.closeDialog();
                       ui_helpers.show_toast(
                         'success',
                         'Task: ' + "'" + this.update_task_req.name + "'" + ' was successfully updated.'
                       );
                       this.resetUpdateTaskReq();
+
+                      // @note for future WS impl.
+                      this.team_tasks = this.team_tasks.map((task) =>
+                        task.uuid === updated_task.uuid ? updated_task : task
+                      );
+                      this.rebuildMaps();
                     })
                     .catch(() => {
                       this.closeDialog();
@@ -1184,13 +1204,22 @@ export class WeDo extends LitElement {
                 if (this.isCreateTaskReqValid()) {
                   api
                     .createTask(this.create_task_req)
-                    .then(() => {
+                    .then((created_task_obj) => {
                       this.closeDialog();
                       ui_helpers.show_toast(
                         'success',
                         'Task: ' + "'" + this.create_task_req.name + "'" + ' was successfully created.'
                       );
                       this.resetCreateTaskReq();
+
+                      // @note for future WS impl.
+                      if (created_task_obj?.project?.uuid) {
+                        this.team_projects = this.team_projects.map((project) =>
+                          project.uuid === created_task_obj.project.uuid ? created_task_obj.project : project
+                        );
+                      }
+                      this.team_tasks = this.team_tasks.concat(created_task_obj.task);
+                      this.rebuildMaps();
                     })
                     .catch(() => {
                       this.closeDialog();
@@ -1324,7 +1353,7 @@ export class WeDo extends LitElement {
             ></paper-icon-button>
           </div>
         </div>
-        ${project_uuid
+        ${project_uuid && project?.tasks_uuids?.length > 0
           ? html`<div class="layout horizontal justified max-width">
               <paper-toggle-button
                 .checked=${delete_project_tasks}
@@ -1364,6 +1393,14 @@ export class WeDo extends LitElement {
                     this.team_projects = this.team_projects.filter(
                       (team_project) => team_project.uuid !== project_uuid
                     );
+                    if (delete_project_tasks) {
+                      let project_tasks_uuids = project?.tasks_uuids?.length > 0 ? project.tasks_uuids.split(',') : [];
+                      if (project_tasks_uuids.length > 0) {
+                        this.team_tasks = this.team_tasks.filter(
+                          (team_task) => !project_tasks_uuids.includes(team_task.uuid)
+                        );
+                      }
+                    }
                     this.rebuildMaps();
                   })
                   .catch(() => {
@@ -1372,10 +1409,14 @@ export class WeDo extends LitElement {
                   });
               } else if (task_uuid) {
                 api
-                  .deleteTask(task_uuid)
+                  .deleteTask(task_uuid, this.selected_team_uuid)
                   .then(() => {
                     this.closeDialog();
                     ui_helpers.show_toast('success', 'Task: ' + "'" + task?.name + "'" + ' was successfully deleted.');
+
+                    // @note for future WS impl.
+                    this.team_tasks = this.team_tasks.filter((team_task) => team_task.uuid != task_uuid);
+                    this.rebuildMaps();
                   })
                   .catch(() => {
                     this.closeDialog();

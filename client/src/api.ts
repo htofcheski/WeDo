@@ -1,4 +1,13 @@
-import { CreateProjectReq, CreateTaskReq, TeamProject, TeamState, UpdateProjectReq, UpdateTaskReq } from './types';
+import {
+  CreateProjectReq,
+  CreateTaskReq,
+  TeamProject,
+  TeamState,
+  TeamTask,
+  TeamTaskForProject,
+  UpdateProjectReq,
+  UpdateTaskReq,
+} from './types';
 
 const json_headers = Object.assign(
   {},
@@ -43,6 +52,11 @@ export const api = {
       headers: json_headers,
     }).then(jsonResponse);
   },
+  teamState(team_uuid: string): Promise<TeamState> {
+    return fetch(`/api/v1/team-state${this.query({ team_uuid: team_uuid })}`, { headers: json_headers }).then(
+      jsonResponse
+    );
+  },
   createProject(req: CreateProjectReq): Promise<TeamProject> {
     return fetch('/api/v1/create-project', {
       headers: json_headers,
@@ -57,7 +71,7 @@ export const api = {
       body: JSON.stringify(req),
     }).then(jsonResponse);
   },
-  deleteProject(project_uuid: string, team_uuid: string, delete_project_tasks: boolean): Promise<any> {
+  deleteProject(project_uuid: string, team_uuid: string, delete_project_tasks: boolean): Promise<string> {
     return fetch(
       `/api/v1/delete-project?project-uuid=${project_uuid}&team-uuid=${team_uuid}&delete-tasks=${delete_project_tasks}`,
       {
@@ -66,25 +80,24 @@ export const api = {
       }
     ).then(jsonResponse);
   },
-
-  teamState(team_uuid: string): Promise<TeamState> {
-    return fetch(`/api/v1/team-state${this.query({ team_uuid: team_uuid })}`, { headers: json_headers }).then(
-      jsonResponse
-    );
-  },
-
-  deleteTask(task_uuid: string): Promise<any> {
-    return fetch(`/api/v1/delete-project?task-uuid=${task_uuid}`, {
-      headers: json_headers,
-      method: 'POST',
-    }).then(jsonResponse);
-  },
-
-  createTask(req: CreateTaskReq): Promise<any> {
+  createTask(req: CreateTaskReq): Promise<TeamTaskForProject> {
     return fetch('/api/v1/create-task', {
       headers: json_headers,
       method: 'POST',
       body: JSON.stringify(req),
+    }).then(jsonResponse);
+  },
+  updateTask(req: UpdateTaskReq): Promise<TeamTask> {
+    return fetch('/api/v1/update-task', {
+      headers: json_headers,
+      method: 'POST',
+      body: JSON.stringify(req),
+    }).then(jsonResponse);
+  },
+  deleteTask(task_uuid: string, team_uuid: string): Promise<string> {
+    return fetch(`/api/v1/delete-task?task-uuid=${task_uuid}&team-uuid=${team_uuid}`, {
+      headers: json_headers,
+      method: 'POST',
     }).then(jsonResponse);
   },
 
@@ -92,14 +105,6 @@ export const api = {
     return fetch(`/api/v1/update-tasks-state?task-uuid=${task_uuid}&new-state=${state.toString()}`, {
       headers: json_headers,
       method: 'POST',
-    }).then(jsonResponse);
-  },
-
-  updateTask(req: UpdateTaskReq): Promise<any> {
-    return fetch('/api/v1/update-task', {
-      headers: json_headers,
-      method: 'POST',
-      body: JSON.stringify(req),
     }).then(jsonResponse);
   },
 };

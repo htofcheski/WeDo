@@ -215,9 +215,25 @@ type TeamTask struct {
 	DeletedState       int        `db:"deleted_state" json:"-"`
 }
 
+type TeamTaskForProject struct {
+	Task    TeamTask    `json:"task"`
+	Project TeamProject `json:"project"`
+}
+
 type TeamTaskList []*TeamTask
 
 type CreateTaskReq struct {
+	ProjectUuid        string   `json:"project_uuid"`
+	TeamUuid           string   `json:"team_uuid"`
+	AssignedUsersUuids []string `json:"assigned_users_uuids"`
+	Name               string   `json:"name"`
+	Description        string   `json:"description"`
+	Goal               string   `json:"goal"`
+	State              int      `json:"state"`
+}
+
+type UpdateTaskReq struct {
+	TaskUuid           string   `json:"task_uuid"`
 	TeamUuid           string   `json:"team_uuid"`
 	AssignedUsersUuids []string `json:"assigned_users_uuids"`
 	Name               string   `json:"name"`

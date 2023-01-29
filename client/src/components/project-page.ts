@@ -3,8 +3,6 @@ import { all } from '../styles/styles';
 import { LoggedInUser, OrgUser, TeamProject, TeamTask, TeamUser } from '../types';
 import { ui_helpers } from '../helpers';
 
-import moment = require('moment');
-
 import '@polymer/paper-progress/paper-progress';
 import '@polymer/paper-tabs/paper-tab';
 import '@polymer/paper-tabs/paper-tabs';
@@ -14,6 +12,8 @@ import '@polymer/iron-icon/iron-icon';
 import '@polymer/iron-icons/iron-icons';
 import '@polymer/iron-icons/image-icons';
 import '@polymer/iron-icons/social-icons';
+
+import 'multiselect-combo-box/multiselect-combo-box';
 
 import '@dreamworld/dw-tooltip/dw-tooltip';
 
@@ -42,6 +42,12 @@ export class LeftPanel extends LitElement {
 
   @property({ attribute: false })
   team_tasks_no_project: TeamTask[] = [];
+
+  @property({ attribute: false })
+  goal_to_tasks_map: Map<string, TeamTask[]> = new Map();
+
+  @property({ attribute: false })
+  goal_filter: string[] = [];
 
   @property({ attribute: false })
   hide_team_tasks_no_project: boolean = false;
@@ -272,6 +278,17 @@ export class LeftPanel extends LitElement {
       font-size: 1.1rem;
       font-weight: 500;
     }
+    .goal-filter {
+      align-self: center;
+      min-width: 18rem;
+      max-width: 18rem;
+      width: 18rem;
+    }
+    .goal-filter-label {
+      align-self: center;
+      font-weight: 500;
+      color: #222;
+    }
   `);
 
   render() {
@@ -280,6 +297,12 @@ export class LeftPanel extends LitElement {
       if (this.logged_in_user && this.only_me) {
         let assigned_users_to_task = task?.assigned_users_uuids?.length > 0 ? task.assigned_users_uuids.split(',') : [];
         if (!assigned_users_to_task.includes(this.logged_in_user.team_user_uuid)) {
+          return false;
+        }
+      }
+
+      if (this.goal_filter.length > 0) {
+        if (!this.goal_filter.includes(task?.goal ? task.goal : '')) {
           return false;
         }
       }
@@ -322,6 +345,28 @@ export class LeftPanel extends LitElement {
             class="only-me"
             >Only me</paper-toggle-button
           >
+          <span class="flex" style="flex: 0.05"></span>
+          <multiselect-combo-box
+            class="goal-filter"
+            compact-mode
+            clear-button-visible
+            theme="purple"
+            @selected-items-changed=${(e) => {
+              this.goal_filter = [].concat(
+                e.detail.value.map((entry) => {
+                  return entry['value'];
+                })
+              );
+            }}
+            item-value-path="value"
+            item-id-path="value"
+            item-label-path="label"
+            .items=${Array.from(this.goal_to_tasks_map.keys()).map((key) => {
+              return { label: key, value: key };
+            })}
+          ></multiselect-combo-box>
+          <span class="flex" style="flex: 0.02"></span>
+          <span class="goal-filter-label">Filter by goal</span>
         </div>
         <div class="layout horizontal">
           <div class="flex paper-tabs-container">
@@ -500,8 +545,8 @@ export class LeftPanel extends LitElement {
                   : html`<div class="layout horizontal center no-task-item">
                       ${this.project_to_tasks_map?.get(project.uuid)?.length > 0
                         ? this.page === '0'
-                          ? 'All tasks are done.'
-                          : 'All tasks are open.'
+                          ? 'All tasks are done or hidden by filters.'
+                          : 'All tasks are open or hidden by filters.'
                         : 'No tasks in this project.'}
                       <iron-icon class="mood-icon" icon="social:mood"></iron-icon>
                     </div>`}
@@ -647,6 +692,12 @@ export class LeftPanel extends LitElement {
           }
         }
 
+        if (this.goal_filter.length > 0) {
+          if (!this.goal_filter.includes(task?.goal ? task.goal : '')) {
+            return false;
+          }
+        }
+
         return this.page === '0' ? task?.state < 2 : task?.state === 2;
       });
       if (team_tasks_filtered && team_tasks_filtered.length > 0) {
@@ -771,6 +822,12 @@ export class LeftPanel extends LitElement {
           let assigned_users_to_task =
             task?.assigned_users_uuids?.length > 0 ? task.assigned_users_uuids.split(',') : [];
           if (!assigned_users_to_task.includes(this.logged_in_user.team_user_uuid)) {
+            return false;
+          }
+        }
+
+        if (this.goal_filter.length > 0) {
+          if (!this.goal_filter.includes(task?.goal ? task.goal : '')) {
             return false;
           }
         }
