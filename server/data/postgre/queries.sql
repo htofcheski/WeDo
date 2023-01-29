@@ -52,6 +52,12 @@ SELECT index, uuid, team_index, tasks_uuids, name, description, created, updated
 -- name: tasks-by-team-index
 SELECT index, uuid, team_index, assigned_users_uuids, name, description, goal, created, updated, completed, state, deleted_state FROM task WHERE team_index = $1 AND deleted_state = 0;
 
+-- name: completed-range-tasks-by-team-index
+SELECT index, uuid, team_index, assigned_users_uuids, name, description, goal, created, updated, completed, state, deleted_state FROM task WHERE team_index = $1 AND state = 2 AND completed > $2 AND completed < $3 AND deleted_state = 0;
+
+-- name: range-tasks-by-team-index
+SELECT index, uuid, team_index, assigned_users_uuids, name, description, goal, created, updated, completed, state, deleted_state FROM task WHERE team_index = $1 AND updated > $2 AND updated < $3 AND deleted_state = 0;
+
 -- name: create-project
 INSERT INTO project(uuid, team_index, tasks_uuids, name, description, created, updated) VALUES ($1, $2, $3, $4, $5, $6, $7);
 

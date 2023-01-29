@@ -54,6 +54,10 @@ export const ui_helpers = {
           margin: 0;
           padding: 0;
         }
+        .user_name {
+          font-weight: 500;
+          font-size: 1.1rem;
+        }
       </style>
       <div class="user layout horizontal center">
         ${org_user.profile_picture

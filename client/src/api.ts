@@ -57,6 +57,11 @@ export const api = {
       jsonResponse
     );
   },
+  teamStatistics(team_uuid: string): Promise<any> {
+    return fetch(`/api/v1/team-statistics${this.query({ team_uuid: team_uuid })}`, { headers: json_headers }).then(
+      jsonResponse
+    );
+  },
   createProject(req: CreateProjectReq): Promise<TeamProject> {
     return fetch('/api/v1/create-project', {
       headers: json_headers,

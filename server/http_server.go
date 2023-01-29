@@ -34,6 +34,7 @@ func RunHTTP() error {
 	////////////////////////////////////////////////////////////////////////////////////////////////////////
 	router.HandleFunc("/api/v1/login", loginUser).Methods("GET")
 	router.HandleFunc("/api/v1/team-state", teamState).Methods("GET")
+	router.HandleFunc("/api/v1/team-statistics", teamStatistics).Methods("GET")
 	router.HandleFunc("/api/v1/logout", logoutUser).Methods("GET")
 	////////////////////////////////////////////////////////////////////////////////////////////////////////
 	router.HandleFunc("/api/v1/create-project", createProject).Methods("POST")
@@ -401,6 +402,43 @@ func teamState(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSONResponse(w, team_state, http.StatusOK)
+}
+
+func teamStatistics(w http.ResponseWriter, r *http.Request) {
+	r_upgraded := UpgradeRequest(r)
+
+	team_uuid_str := r_upgraded.QueryOrDefault("team_uuid", "")
+	team_uuid := _uuid.FromStringOrNil(team_uuid_str)
+	if team_uuid == _uuid.Nil {
+		msg := "[team_uuid] missing or invalid"
+		boom.BadData(w, msg)
+		Log.Error("teamStatistics: " + msg)
+		return
+	}
+
+	_, _, teams, _, err := apiUserState(r)
+	if err != nil {
+		boom.BadData(w, err.Error())
+		Log.Error("teamStatistics: " + err.Error())
+		return
+	}
+
+	team := teams.hasTeam(team_uuid)
+	if team == nil {
+		msg := "no permission for team"
+		boom.BadData(w, msg)
+		Log.Error("teamStatistics: " + msg)
+		return
+	}
+
+	team_statistics, err := teamStatisticsForOrgUserTeam(team)
+	if err != nil {
+		boom.Internal(w, err.Error())
+		Log.Error("teamStatistics: " + err.Error())
+		return
+	}
+
+	writeJSONResponse(w, team_statistics, http.StatusOK)
 }
 
 func createProject(w http.ResponseWriter, r *http.Request) {

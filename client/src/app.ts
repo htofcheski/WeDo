@@ -107,6 +107,9 @@ export class WeDo extends LitElement {
   @property({ attribute: false })
   change_tasks_state_disabled: boolean = false;
 
+  @property({ attribute: false })
+  refreshing_statistics: boolean = false;
+
   @property()
   page: Pages = 'projects';
 
@@ -221,6 +224,20 @@ export class WeDo extends LitElement {
                 .logged_in_user=${this.logged_in_user}
                 @createProject=${() => {
                   this.openDialog(this.projectDialogTemplate());
+                }}
+                @refreshStatistics=${() => {
+                  if (!this.refreshing_statistics && this.selected_team_uuid) {
+                    this.refreshing_statistics = true;
+                    api
+                      .teamStatistics(this.selected_team_uuid)
+                      .then((resp) => {
+                        console.log(resp);
+                        this.refreshing_statistics = false;
+                      })
+                      .catch(() => {
+                        this.refreshing_statistics = false;
+                      });
+                  }
                 }}
               ></top-header>
               <div class="layout horizontal main-window-container">
@@ -395,6 +412,24 @@ export class WeDo extends LitElement {
         this.rebuildMaps();
         this.buildLoggedInUser();
       });
+    }
+
+    if (
+      _changedProperties.has('page') &&
+      this.page === 'statistics' &&
+      this.selected_team_uuid.length > 0 &&
+      !this.refreshing_statistics
+    ) {
+      this.refreshing_statistics = true;
+      api
+        .teamStatistics(this.selected_team_uuid)
+        .then((resp) => {
+          console.log(resp);
+          this.refreshing_statistics = false;
+        })
+        .catch(() => {
+          this.refreshing_statistics = false;
+        });
     }
   }
 

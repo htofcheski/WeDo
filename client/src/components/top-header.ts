@@ -49,11 +49,14 @@ export class TopHeader extends LitElement {
     return html`<div class="layout horizontal main-container">
       <div class="layout horizontal center-center page-name">
         ${this.page === 'projects' ? 'Projects' : 'Statistics'}<paper-icon-button
-          ?hidden=${this.page != 'projects'}
-          icon="add-circle"
+          icon=${this.page === 'projects' ? 'add-circle' : 'refresh'}
           style="color: var(--theme-primary);"
           @click=${() => {
-            this.dispatchEvent(new CustomEvent('createProject', {}));
+            if (this.page === 'projects') {
+              this.dispatchEvent(new CustomEvent('createProject', {}));
+            } else {
+              this.dispatchEvent(new CustomEvent('refreshStatistics', {}));
+            }
           }}
         ></paper-icon-button>
       </div>

@@ -171,6 +171,24 @@ type TeamState struct {
 	TeamTasks        TeamTaskList        `json:"team_tasks"`
 }
 
+type TeamStatistics struct {
+	TeamUuid        _uuid.UUID                  `json:"team_uuid"`
+	Period          map[string]*PeriodTaskCount `json:"period"`
+	GoalTaskCount   map[string]*TaskCount       `json:"goal_task_count"`
+	YearTeamUserMvp _uuid.UUID                  `json:"year_team_user_mvp"`
+	YearTaskCount   *TaskCount                  `json:"year_task_count"`
+}
+
+type PeriodTaskCount struct {
+	TeamUserMvp                 _uuid.UUID     `json:"team_user_mvp"`
+	TeamUserCompletedTasksCount map[string]int `json:"team_user_completed_tasks_count"`
+}
+
+type TaskCount struct {
+	Completed int `json:"completed"`
+	Left      int `json:"left"`
+}
+
 type TeamProject struct {
 	Index        uint64     `db:"index" json:"-"`
 	Uuid         _uuid.UUID `db:"uuid" json:"uuid"`

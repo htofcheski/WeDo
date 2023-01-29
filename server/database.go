@@ -342,6 +342,126 @@ func teamStateForOrgUserTeam(team *Team) (TeamState, error) {
 	return team_state, nil
 }
 
+func teamStatisticsForOrgUserTeam(team *Team) (TeamStatistics, error) {
+	team_statistics := TeamStatistics{TeamUuid: team.Uuid}
+	team_statistics.Period = make(map[string]*PeriodTaskCount)
+	periods := []string{"previous_month", "previous_week", "previous_day", "day", "week", "month"}
+	for _, period := range periods {
+		begin, end := buildTimestampsFromPeriod(period)
+		period_task_count := &PeriodTaskCount{}
+		period_task_count.TeamUserCompletedTasksCount = make(map[string]int)
+		team_tasks := TeamTaskList{}
+		err := DB.postgre.Select(&team_tasks, DB.QueriesRawMap["completed-range-tasks-by-team-index"], team.Index, begin, end)
+		if err != nil {
+			return TeamStatistics{}, err
+		}
+
+		max_team_tasks_for_period := 0
+
+		for _, team_task := range team_tasks {
+			assigned_users_uuids := []string{}
+			if len(team_task.AssignedUsersUuids) > 0 {
+				assigned_users_uuids = strings.Split(team_task.AssignedUsersUuids, ",")
+			}
+			for _, assigned_user_uuid := range assigned_users_uuids {
+				if count, ok := period_task_count.TeamUserCompletedTasksCount[assigned_user_uuid]; ok {
+					period_task_count.TeamUserCompletedTasksCount[assigned_user_uuid] = count + 1
+					if count+1 > max_team_tasks_for_period {
+						period_task_count.TeamUserMvp = _uuid.FromStringOrNil(assigned_user_uuid)
+						max_team_tasks_for_period = count + 1
+					}
+				} else {
+					period_task_count.TeamUserCompletedTasksCount[assigned_user_uuid] = 1
+					if 1 > max_team_tasks_for_period {
+						period_task_count.TeamUserMvp = _uuid.FromStringOrNil(assigned_user_uuid)
+						max_team_tasks_for_period = 1
+					}
+				}
+			}
+		}
+
+		team_statistics.Period[period] = period_task_count
+	}
+
+	begin, end := buildTimestampsFromPeriod("year")
+	team_tasks := TeamTaskList{}
+	err := DB.postgre.Select(&team_tasks, DB.QueriesRawMap["range-tasks-by-team-index"], team.Index, begin, end)
+	if err != nil {
+		return TeamStatistics{}, err
+	}
+	year_team_user_completed_tasks_count := make(map[string]int)
+	max_team_tasks_for_year := 0
+
+	team_statistics.GoalTaskCount = make(map[string]*TaskCount)
+	team_statistics.YearTaskCount = &TaskCount{Completed: 0, Left: 0}
+	for _, team_task := range team_tasks {
+		assigned_users_uuids := []string{}
+		if len(team_task.AssignedUsersUuids) > 0 {
+			assigned_users_uuids = strings.Split(team_task.AssignedUsersUuids, ",")
+		}
+		for _, assigned_user_uuid := range assigned_users_uuids {
+			if count, ok := year_team_user_completed_tasks_count[assigned_user_uuid]; ok {
+				year_team_user_completed_tasks_count[assigned_user_uuid] = count + 1
+				if count+1 > max_team_tasks_for_year {
+					team_statistics.YearTeamUserMvp = _uuid.FromStringOrNil(assigned_user_uuid)
+					max_team_tasks_for_year = count + 1
+				}
+			} else {
+				year_team_user_completed_tasks_count[assigned_user_uuid] = 1
+				if 1 > max_team_tasks_for_year {
+					team_statistics.YearTeamUserMvp = _uuid.FromStringOrNil(assigned_user_uuid)
+					max_team_tasks_for_year = 1
+				}
+			}
+		}
+
+		if team_task.State == 2 {
+			team_statistics.YearTaskCount.Completed += 1
+			if len(team_task.Goal) > 0 {
+				if _, ok := team_statistics.GoalTaskCount[team_task.Goal]; ok {
+					team_statistics.GoalTaskCount[team_task.Goal].Completed += 1
+				} else {
+					team_statistics.GoalTaskCount[team_task.Goal] = &TaskCount{Completed: 1, Left: 0}
+				}
+			}
+		} else {
+			team_statistics.YearTaskCount.Left += 1
+			if len(team_task.Goal) > 0 {
+				if _, ok := team_statistics.GoalTaskCount[team_task.Goal]; ok {
+					team_statistics.GoalTaskCount[team_task.Goal].Left += 1
+				} else {
+					team_statistics.GoalTaskCount[team_task.Goal] = &TaskCount{Completed: 0, Left: 1}
+				}
+			}
+		}
+	}
+
+	return team_statistics, nil
+}
+
+func buildTimestampsFromPeriod(period string) (time.Time, time.Time) {
+	now := time.Now().UTC()
+
+	switch period {
+	case "year":
+		return now.AddDate(0, -12, 0), now
+	case "previous_month":
+		return now.AddDate(0, -1, 0), now
+	case "previous_week":
+		return now.AddDate(0, 0, -7), now
+	case "previous_day":
+		return now.AddDate(0, 0, -1), now
+	case "day":
+		return now, now.AddDate(0, 0, 1)
+	case "week":
+		return now, now.AddDate(0, 0, 7)
+	case "month":
+		return now, now.AddDate(0, 1, 0)
+	}
+
+	return time.Time{}, time.Time{}
+}
+
 func createProjectFromReq(req CreateProjectReq) (*TeamProject, error) {
 	team := &Team{}
 	err := DB.postgre.Get(team, DB.QueriesRawMap["team-by-uuid"], _uuid.FromStringOrNil(req.TeamUuid))
