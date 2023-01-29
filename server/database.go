@@ -534,9 +534,9 @@ func createTaskFromReq(req CreateTaskReq) (*TeamTask, *TeamProject, error) {
 		tasks_uuids_str := ""
 		if len(project.TasksUuids) > 0 {
 			tasks_uuids = strings.Split(project.TasksUuids, ",")
-			tasks_uuids = append(tasks_uuids, uuid.String())
-			tasks_uuids_str = strings.Join(tasks_uuids[:], ",")
 		}
+		tasks_uuids = append(tasks_uuids, uuid.String())
+		tasks_uuids_str = strings.Join(tasks_uuids[:], ",")
 
 		_, err = tx.Exec(DB.QueriesRawMap["update-project"], tasks_uuids_str, project.Name, project.Description, now, project.Uuid, team.Index)
 		if err != nil {

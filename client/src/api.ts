@@ -100,11 +100,4 @@ export const api = {
       method: 'POST',
     }).then(jsonResponse);
   },
-
-  updateTasksState(task_uuid: string, state: number): Promise<any> {
-    return fetch(`/api/v1/update-tasks-state?task-uuid=${task_uuid}&new-state=${state.toString()}`, {
-      headers: json_headers,
-      method: 'POST',
-    }).then(jsonResponse);
-  },
 };

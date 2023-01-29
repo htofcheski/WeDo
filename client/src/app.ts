@@ -279,18 +279,36 @@ export class WeDo extends LitElement {
                             if (task_state === 2) {
                               task_state = -1;
                             }
+
+                            let update_task_state_req: UpdateTaskReq = {
+                              task_uuid: task.uuid ? task.uuid : '',
+                              team_uuid: this.selected_team_uuid ? this.selected_team_uuid : '',
+                              assigned_users_uuids:
+                                task?.assigned_users_uuids?.length > 0 ? task.assigned_users_uuids.split(',') : [],
+                              name: task.name ? task.name : '',
+                              description: task.description ? task.description : '',
+                              goal: task.goal ? task.goal : '',
+                              state: task_state + 1,
+                            };
+
                             api
-                              .updateTasksState(task.uuid, task_state + 1)
-                              .then(() => {
+                              .updateTask(update_task_state_req)
+                              .then((updated_task) => {
                                 ui_helpers.show_toast(
                                   'success',
-                                  'Task: ' + "'" + task.name + "'" + ' was successfully updated.'
+                                  'Task: ' + "'" + update_task_state_req.name + "'" + ' was successfully updated.'
                                 );
+
+                                // @note for future WS impl.
+                                this.team_tasks = this.team_tasks.map((task) =>
+                                  task.uuid === updated_task.uuid ? updated_task : task
+                                );
+                                this.rebuildMaps();
                                 this.change_tasks_state_disabled = false;
                               })
                               .catch(() => {
-                                ui_helpers.show_toast('error', 'Task modification failed.');
                                 this.change_tasks_state_disabled = false;
+                                ui_helpers.show_toast('error', 'Task modification failed.');
                               });
                           } else {
                             this.change_tasks_state_disabled = false;
@@ -500,6 +518,9 @@ export class WeDo extends LitElement {
 
       this.project_to_tasks_map = new Map(project_to_tasks_map);
       this.project_to_assigned_users_map = new Map(project_to_assigned_users_map);
+    } else {
+      this.project_to_tasks_map = new Map();
+      this.project_to_assigned_users_map = new Map();
     }
 
     if (this.team_tasks.length > 0) {
@@ -519,6 +540,9 @@ export class WeDo extends LitElement {
 
       this.team_tasks_no_project = team_tasks_no_project.length > 0 ? [].concat(team_tasks_no_project) : [];
       this.goal_to_tasks_map = new Map(goal_to_tasks_map);
+    } else {
+      this.team_tasks_no_project = [];
+      this.goal_to_tasks_map = new Map();
     }
   }
 

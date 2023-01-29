@@ -393,7 +393,13 @@ func teamState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	team_state, _ := teamStateForOrgUserTeam(team)
+	team_state, err := teamStateForOrgUserTeam(team)
+	if err != nil {
+		boom.Internal(w, err.Error())
+		Log.Error("teamState: " + err.Error())
+		return
+	}
+
 	writeJSONResponse(w, team_state, http.StatusOK)
 }
 

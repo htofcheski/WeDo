@@ -362,7 +362,16 @@ export class LeftPanel extends LitElement {
             item-id-path="value"
             item-label-path="label"
             .items=${Array.from(this.goal_to_tasks_map.keys()).map((key) => {
-              return { label: key, value: key };
+              return {
+                label:
+                  key +
+                  ' (' +
+                  (this.goal_to_tasks_map?.get(key)?.length > 0
+                    ? this.goal_to_tasks_map.get(key).length.toString()
+                    : '?') +
+                  ')',
+                value: key,
+              };
             })}
           ></multiselect-combo-box>
           <span class="flex" style="flex: 0.02"></span>
