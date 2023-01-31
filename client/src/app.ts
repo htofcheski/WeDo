@@ -13,6 +13,9 @@ import {
   Pages,
   CreateTaskReq,
   UpdateTaskReq,
+  TeamStatistics,
+  PeriodTaskCount,
+  TaskCount,
 } from './types';
 
 import { render } from 'lit-html';
@@ -41,6 +44,7 @@ import './components/right-panel';
 import './components/top-header';
 import './components/left-panel';
 import './components/project-page';
+import './components/team-statistics';
 
 declare global {
   interface Window {
@@ -64,6 +68,9 @@ export class WeDo extends LitElement {
 
   @property({ attribute: false })
   team_state: TeamState = undefined;
+
+  @property({ attribute: false })
+  team_statistics: TeamStatistics = undefined;
 
   @property({ attribute: false })
   team_users: TeamUser[] = [];
@@ -231,7 +238,7 @@ export class WeDo extends LitElement {
                     api
                       .teamStatistics(this.selected_team_uuid)
                       .then((resp) => {
-                        console.log(resp);
+                        this.team_statistics = this.rebuildTeamStatistics(resp);
                         this.refreshing_statistics = false;
                       })
                       .catch(() => {
@@ -333,7 +340,7 @@ export class WeDo extends LitElement {
                         }}
                       ></project-page>
                     </div>
-                    <div class="wedo-page" page="statistics"></div>
+                    <div class="wedo-page" page="statistics"><team-statistics></team-statistics></div>
                   </iron-pages>
                 </div>
                 <div class="layout horizontal right-panel-container">
@@ -361,9 +368,6 @@ export class WeDo extends LitElement {
       : html` ${this.available_teams.length > 0
           ? html` <div class="center-div">
               <vaadin-combo-box
-                @opened-changed=${(e) => {
-                  console.log('AAA');
-                }}
                 class="team-selector"
                 placeholder="Select team"
                 .items=${this.available_teams.map((team) => {
@@ -424,7 +428,7 @@ export class WeDo extends LitElement {
       api
         .teamStatistics(this.selected_team_uuid)
         .then((resp) => {
-          console.log(resp);
+          this.team_statistics = this.rebuildTeamStatistics(resp);
           this.refreshing_statistics = false;
         })
         .catch(() => {
@@ -474,6 +478,53 @@ export class WeDo extends LitElement {
     }
 
     return Object.assign({}, team_state);
+  }
+
+  rebuildTeamStatistics(team_statistics: TeamStatistics): TeamStatistics {
+    let has_changed = false;
+
+    if (team_statistics?.period) {
+      let period_entries = Object.entries(team_statistics.period);
+      let new_period_map = new Map<string, PeriodTaskCount>();
+
+      if (period_entries.length > 0) {
+        period_entries.forEach((e) => {
+          let completed_tasks_count_map = new Map<string, number>();
+          if (e[1]?.team_user_completed_tasks_count) {
+            let completed_tasks_count_entries = Object.entries(e[1].team_user_completed_tasks_count);
+            completed_tasks_count_entries.forEach((e1) => {
+              // @ts-ignore
+              completed_tasks_count_map.set(e1[0], e1[1]);
+            });
+          }
+          e[1].team_user_completed_tasks_count = completed_tasks_count_map;
+
+          new_period_map.set(e[0], e[1]);
+        });
+
+        has_changed = true;
+        team_statistics.period = new_period_map;
+      }
+    }
+
+    if (team_statistics?.goal_task_count) {
+      let goal_task_count_entries = Object.entries(team_statistics.goal_task_count);
+      let new_goal_task_count_map = new Map<string, TaskCount>();
+
+      if (goal_task_count_entries.length > 0) {
+        goal_task_count_entries.forEach((e) => {
+          new_goal_task_count_map.set(e[0], e[1]);
+        });
+      }
+
+      has_changed = true;
+      team_statistics.goal_task_count = new_goal_task_count_map;
+    }
+
+    if (!has_changed) {
+      return team_statistics;
+    }
+    return Object.assign({}, team_statistics);
   }
 
   buildLoggedInUser() {

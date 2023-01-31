@@ -95,3 +95,21 @@ export interface TeamState {
   team_projects: TeamProject[];
   team_tasks: TeamTask[];
 }
+
+export interface PeriodTaskCount {
+  team_user_mvp: string;
+  team_user_completed_tasks_count: Map<string, number>;
+}
+
+export interface TaskCount {
+  completed: number;
+  left: number;
+}
+
+export interface TeamStatistics {
+  team_uuid: string;
+  period: Map<string, PeriodTaskCount>;
+  goal_task_count: Map<string, TaskCount>;
+  year_team_user_mvp: string;
+  year_task_count: TaskCount;
+}
