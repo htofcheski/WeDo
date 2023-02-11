@@ -8,12 +8,23 @@ import moment = require('moment');
 import '@dreamworld/dw-tooltip/dw-tooltip';
 
 export const ui_helpers = {
-  renderUser(org_user: OrgUser, team_user: TeamUser, icon_only: boolean, overlap_icons?: boolean): TemplateResult {
+  renderUser(
+    org_user: OrgUser,
+    team_user: TeamUser,
+    icon_only: boolean,
+    overlap_icons?: boolean,
+    mvp?: boolean
+  ): TemplateResult {
     if (!org_user || !team_user) {
       return html``;
     }
     if (!org_user.username && !org_user.email) {
       return html``;
+    }
+
+    if (mvp) {
+      icon_only = true;
+      overlap_icons = false;
     }
 
     let initials = org_user.username
@@ -24,16 +35,18 @@ export const ui_helpers = {
     let seed = team_user.uuid ? team_user.uuid : org_user.email ? org_user.email : org_user.uuid;
     let margin = icon_only ? (overlap_icons ? '-1.1rem' : '0.3rem') : '0.75rem';
     let margin_hover = overlap_icons ? '-1rem' : '0';
+    let circle_size = mvp ? '10rem' : '2.5rem';
+    let font_size = mvp ? '3rem' : '0.75rem';
 
     return html`
       <style>
         #${'user-id-' + seed}[initials]:before {
           content: attr(initials);
           display: inline-block;
-          font-size: 0.75rem;
-          width: 2.5rem;
-          height: 2.5rem;
-          line-height: 2.5rem;
+          font-size: ${font_size};
+          width: ${circle_size};
+          height: ${circle_size};
+          line-height: ${circle_size};
           text-align: center;
           border-radius: 50%;
           background: ${this.color(seed)};
@@ -58,8 +71,13 @@ export const ui_helpers = {
           font-weight: 500;
           font-size: 1.1rem;
         }
+        .user_name_mvp {
+          font-size: 2rem;
+          font-weight: 500;
+          margin-top: 1.5rem;
+        }
       </style>
-      <div class="user layout horizontal center">
+      <div class="user layout ${mvp ? 'vertical' : 'horizontal'} center">
         ${org_user.profile_picture
           ? html`<iron-image
                 id=${'user-picture-id-' + seed}
@@ -91,6 +109,7 @@ export const ui_helpers = {
                   `
                 : html``}`}
         ${!icon_only ? html` <div class="user_name">${org_user.username || org_user.email}</div>` : html``}
+        ${mvp ? html` <div class="user_name_mvp">Team MVP: ${org_user.username || org_user.email}</div>` : html``}
       </div>
     `;
   },

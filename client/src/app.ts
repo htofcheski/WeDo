@@ -174,226 +174,234 @@ export class WeDo extends LitElement {
   `);
 
   render() {
-    return this.loading
-      ? html`<div class="center-div"><paper-spinner class="loading" active></paper-spinner></div>`
-      : this.selected_team_uuid.length > 0
-      ? html`
-          <dom-module id="purple" theme-for="vaadin-*-* multiselect-combo-box">
-            <template>
-              <style>
-                :host([readonly][theme~='purple']) [part='label'] {
-                  color: var(--theme-primary) !important;
-                }
-                :host([theme~='purple']) [part='label']:not(:hover) {
-                  color: var(--theme-primary) !important;
-                }
-              </style>
-            </template>
-          </dom-module>
-          <dom-module id="vaadin-combo-box-overlay-styles" theme-for="vaadin-combo-box-overlay">
-            <template>
-              <style>
-                :host {
-                  z-index: 900000000000;
-                  width: var(--vaadin-combo-box-overlay-width, var(--_vaadin-combo-box-overlay-default-width, auto));
-                }
-              </style>
-            </template>
-          </dom-module>
-          <paper-toast id="toast">
-            <div class="layout horizontal center-center">
-              <vaadin-button
-                hidden
-                @click=${() => {
-                  const toast = this.shadowRoot.querySelector<PaperToastElement>('#toast');
-                  if (toast) {
-                    toast.toggle();
-                  }
-                }}
-                >Close
-              </vaadin-button>
-            </div>
-          </paper-toast>
-          <div class="layout horizontal max-height">
-            <left-panel
-              .page=${this.page}
-              .selected_team_uuid=${this.selected_team_uuid}
-              @changePage=${(e) => {
-                let new_page = String(e.detail.page) as Pages;
-                if (new_page) {
-                  this.page = new_page;
-                }
-              }}
-            ></left-panel>
-            <div class="layout vertical max-width">
-              <top-header
+    return html`<dom-module id="purple" theme-for="vaadin-*-* multiselect-combo-box">
+        <template>
+          <style>
+            :host([readonly][theme~='purple']) [part='label'] {
+              color: var(--theme-primary) !important;
+            }
+            :host([theme~='purple']) [part='label']:not(:hover) {
+              color: var(--theme-primary) !important;
+            }
+          </style>
+        </template>
+      </dom-module>
+      <dom-module id="vaadin-combo-box-overlay-styles" theme-for="vaadin-combo-box-overlay">
+        <template>
+          <style>
+            :host {
+              z-index: 900000000000;
+              width: var(--vaadin-combo-box-overlay-width, var(--_vaadin-combo-box-overlay-default-width, auto));
+            }
+          </style>
+        </template>
+      </dom-module>
+      <paper-toast id="toast">
+        <div class="layout horizontal center-center">
+          <vaadin-button
+            hidden
+            @click=${() => {
+              const toast = this.shadowRoot.querySelector<PaperToastElement>('#toast');
+              if (toast) {
+                toast.toggle();
+              }
+            }}
+            >Close
+          </vaadin-button>
+        </div></paper-toast
+      >${this.loading
+        ? html`<div class="center-div"><paper-spinner class="loading" active></paper-spinner></div>`
+        : this.selected_team_uuid.length > 0
+        ? html`
+            <div class="layout horizontal max-height">
+              <left-panel
                 .page=${this.page}
-                .logged_in_user=${this.logged_in_user}
-                @createProject=${() => {
-                  this.openDialog(this.projectDialogTemplate());
-                }}
-                @refreshStatistics=${() => {
-                  if (!this.refreshing_statistics && this.selected_team_uuid) {
-                    this.refreshing_statistics = true;
-                    api
-                      .teamStatistics(this.selected_team_uuid)
-                      .then((resp) => {
-                        this.team_statistics = this.rebuildTeamStatistics(resp);
-                        this.refreshing_statistics = false;
-                      })
-                      .catch(() => {
-                        this.refreshing_statistics = false;
-                      });
+                .selected_team_uuid=${this.selected_team_uuid}
+                @changePage=${(e) => {
+                  let new_page = String(e.detail.page) as Pages;
+                  if (new_page) {
+                    this.page = new_page;
                   }
                 }}
-              ></top-header>
-              <div class="layout horizontal main-window-container">
-                <div class="layout horizontal main-window-iron-pages-container">
-                  <iron-pages selected=${this.page} attr-for-selected="page">
-                    <div class="wedo-page" page="projects">
-                      <project-page
-                        .change_tasks_state_disabled=${this.change_tasks_state_disabled}
-                        .logged_in_user=${this.logged_in_user}
-                        .team_users=${this.team_users}
-                        .team_to_org_user_map=${this.team_to_org_user_map}
-                        .team_tasks_no_project=${this.team_tasks_no_project}
-                        .goal_to_tasks_map=${this.goal_to_tasks_map}
-                        .team_projects=${this.team_projects}
-                        .project_to_tasks_map=${this.project_to_tasks_map}
-                        .project_to_assigned_users_map=${this.project_to_assigned_users_map}
-                        @deleteProject=${(e) => {
-                          if (e.detail.project_uuid) {
-                            this.openDialog(this.deleteProjectOrTaskTemplate(e.detail.project_uuid, ''));
-                          }
-                        }}
-                        @deleteTask=${(e) => {
-                          if (e.detail.task_uuid) {
-                            this.openDialog(this.deleteProjectOrTaskTemplate('', e.detail.task_uuid));
-                          }
-                        }}
-                        @createTaskForProject=${(e) => {
-                          if (e.detail.project_uuid) {
-                            this.openDialog(this.taskDialogTemplate(e.detail.project_uuid));
-                          } else {
-                            this.openDialog(this.taskDialogTemplate());
-                          }
-                        }}
-                        @updateTask=${(e) => {
-                          if (e.detail.task_uuid) {
+              ></left-panel>
+              <div class="layout vertical max-width">
+                <top-header
+                  .page=${this.page}
+                  .logged_in_user=${this.logged_in_user}
+                  @createProject=${() => {
+                    this.openDialog(this.projectDialogTemplate());
+                  }}
+                  @refreshStatistics=${() => {
+                    if (!this.refreshing_statistics && this.selected_team_uuid) {
+                      this.refreshing_statistics = true;
+                      api
+                        .teamStatistics(this.selected_team_uuid)
+                        .then((resp) => {
+                          this.team_statistics = this.rebuildTeamStatistics(resp);
+                          this.refreshing_statistics = false;
+                          ui_helpers.show_toast('success', 'Team statistics were successfully refreshed.');
+                        })
+                        .catch(() => {
+                          this.refreshing_statistics = false;
+                        });
+                    }
+                  }}
+                ></top-header>
+                <div class="layout horizontal main-window-container">
+                  <div class="layout horizontal main-window-iron-pages-container">
+                    <iron-pages selected=${this.page} attr-for-selected="page">
+                      <div class="wedo-page" page="projects">
+                        <project-page
+                          .change_tasks_state_disabled=${this.change_tasks_state_disabled}
+                          .logged_in_user=${this.logged_in_user}
+                          .team_users=${this.team_users}
+                          .team_to_org_user_map=${this.team_to_org_user_map}
+                          .team_tasks_no_project=${this.team_tasks_no_project}
+                          .goal_to_tasks_map=${this.goal_to_tasks_map}
+                          .team_projects=${this.team_projects}
+                          .project_to_tasks_map=${this.project_to_tasks_map}
+                          .project_to_assigned_users_map=${this.project_to_assigned_users_map}
+                          @deleteProject=${(e) => {
+                            if (e.detail.project_uuid) {
+                              this.openDialog(this.deleteProjectOrTaskTemplate(e.detail.project_uuid, ''));
+                            }
+                          }}
+                          @deleteTask=${(e) => {
+                            if (e.detail.task_uuid) {
+                              this.openDialog(this.deleteProjectOrTaskTemplate('', e.detail.task_uuid));
+                            }
+                          }}
+                          @createTaskForProject=${(e) => {
+                            if (e.detail.project_uuid) {
+                              this.openDialog(this.taskDialogTemplate(e.detail.project_uuid));
+                            } else {
+                              this.openDialog(this.taskDialogTemplate());
+                            }
+                          }}
+                          @updateTask=${(e) => {
+                            if (e.detail.task_uuid) {
+                              let task = this.team_tasks.find((task) => task.uuid === e.detail.task_uuid);
+                              if (task) {
+                                this.openDialog(this.taskDialogTemplate('', task));
+                              }
+                            }
+                          }}
+                          @updateProject=${(e) => {
+                            if (e.detail.project_uuid) {
+                              let project = this.team_projects.find(
+                                (project) => project.uuid === e.detail.project_uuid
+                              );
+                              if (project) {
+                                this.openDialog(this.projectDialogTemplate(project));
+                              }
+                            }
+                          }}
+                          @changeTasksState=${(e) => {
+                            this.change_tasks_state_disabled = true;
+
                             let task = this.team_tasks.find((task) => task.uuid === e.detail.task_uuid);
                             if (task) {
-                              this.openDialog(this.taskDialogTemplate('', task));
-                            }
-                          }
-                        }}
-                        @updateProject=${(e) => {
-                          if (e.detail.project_uuid) {
-                            let project = this.team_projects.find((project) => project.uuid === e.detail.project_uuid);
-                            if (project) {
-                              this.openDialog(this.projectDialogTemplate(project));
-                            }
-                          }
-                        }}
-                        @changeTasksState=${(e) => {
-                          this.change_tasks_state_disabled = true;
+                              let task_state = task.state;
+                              if (task_state === 2) {
+                                task_state = -1;
+                              }
 
+                              let update_task_state_req: UpdateTaskReq = {
+                                task_uuid: task.uuid ? task.uuid : '',
+                                team_uuid: this.selected_team_uuid ? this.selected_team_uuid : '',
+                                assigned_users_uuids:
+                                  task?.assigned_users_uuids?.length > 0 ? task.assigned_users_uuids.split(',') : [],
+                                name: task.name ? task.name : '',
+                                description: task.description ? task.description : '',
+                                goal: task.goal ? task.goal : '',
+                                state: task_state + 1,
+                              };
+
+                              api
+                                .updateTask(update_task_state_req)
+                                .then((updated_task) => {
+                                  ui_helpers.show_toast(
+                                    'success',
+                                    'Task: ' + "'" + update_task_state_req.name + "'" + ' was successfully updated.'
+                                  );
+
+                                  // @note for future WS impl.
+                                  this.team_tasks = this.team_tasks.map((task) =>
+                                    task.uuid === updated_task.uuid ? updated_task : task
+                                  );
+                                  this.rebuildMaps();
+                                  this.change_tasks_state_disabled = false;
+                                })
+                                .catch(() => {
+                                  this.change_tasks_state_disabled = false;
+                                  ui_helpers.show_toast('error', 'Task modification failed.');
+                                });
+                            } else {
+                              this.change_tasks_state_disabled = false;
+                            }
+                          }}
+                        ></project-page>
+                      </div>
+                      <div class="wedo-page" page="statistics">
+                        <team-statistics
+                          .team_statistics=${this.team_statistics}
+                          .team_users=${this.team_users}
+                          .team_to_org_user_map=${this.team_to_org_user_map}
+                        ></team-statistics>
+                      </div>
+                    </iron-pages>
+                  </div>
+                  <div class="layout horizontal right-panel-container">
+                    <right-panel
+                      .team_users=${this.team_users}
+                      .team_to_org_user_map=${this.team_to_org_user_map}
+                      .team_tasks=${this.team_tasks}
+                      @viewTeam=${() => {
+                        this.openDialog(this.viewTeamTemplate());
+                      }}
+                      @updateTask=${(e) => {
+                        if (e.detail.task_uuid) {
                           let task = this.team_tasks.find((task) => task.uuid === e.detail.task_uuid);
                           if (task) {
-                            let task_state = task.state;
-                            if (task_state === 2) {
-                              task_state = -1;
-                            }
-
-                            let update_task_state_req: UpdateTaskReq = {
-                              task_uuid: task.uuid ? task.uuid : '',
-                              team_uuid: this.selected_team_uuid ? this.selected_team_uuid : '',
-                              assigned_users_uuids:
-                                task?.assigned_users_uuids?.length > 0 ? task.assigned_users_uuids.split(',') : [],
-                              name: task.name ? task.name : '',
-                              description: task.description ? task.description : '',
-                              goal: task.goal ? task.goal : '',
-                              state: task_state + 1,
-                            };
-
-                            api
-                              .updateTask(update_task_state_req)
-                              .then((updated_task) => {
-                                ui_helpers.show_toast(
-                                  'success',
-                                  'Task: ' + "'" + update_task_state_req.name + "'" + ' was successfully updated.'
-                                );
-
-                                // @note for future WS impl.
-                                this.team_tasks = this.team_tasks.map((task) =>
-                                  task.uuid === updated_task.uuid ? updated_task : task
-                                );
-                                this.rebuildMaps();
-                                this.change_tasks_state_disabled = false;
-                              })
-                              .catch(() => {
-                                this.change_tasks_state_disabled = false;
-                                ui_helpers.show_toast('error', 'Task modification failed.');
-                              });
-                          } else {
-                            this.change_tasks_state_disabled = false;
+                            this.openDialog(this.taskDialogTemplate('', task));
                           }
-                        }}
-                      ></project-page>
-                    </div>
-                    <div class="wedo-page" page="statistics"><team-statistics></team-statistics></div>
-                  </iron-pages>
-                </div>
-                <div class="layout horizontal right-panel-container">
-                  <right-panel
-                    .team_users=${this.team_users}
-                    .team_to_org_user_map=${this.team_to_org_user_map}
-                    .team_tasks=${this.team_tasks}
-                    @viewTeam=${() => {
-                      this.openDialog(this.viewTeamTemplate());
-                    }}
-                    @updateTask=${(e) => {
-                      if (e.detail.task_uuid) {
-                        let task = this.team_tasks.find((task) => task.uuid === e.detail.task_uuid);
-                        if (task) {
-                          this.openDialog(this.taskDialogTemplate('', task));
                         }
-                      }
-                    }}
-                  ></right-panel>
+                      }}
+                    ></right-panel>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        `
-      : html` ${this.available_teams.length > 0
-          ? html` <div class="center-div">
-              <vaadin-combo-box
-                class="team-selector"
-                placeholder="Select team"
-                .items=${this.available_teams.map((team) => {
-                  return { label: team.name, value: team.uuid };
-                })}
-                @selected-item-changed=${(e) => {
-                  if (e?.detail?.value?.value) {
-                    this.selected_team_uuid = e.detail.value.value;
-                    database.setSelectedTeam(this.selected_team_uuid);
-                  }
-                }}
-              ></vaadin-combo-box>
-            </div>`
-          : html` <div class="center-div">
-              You don't belong to any team.
-              <iron-icon
-                icon="maps:directions-walk"
-                style="width: 1.5rem;"
-                @click=${() => {
-                  api.logout().then(() => {
-                    database.removeSelectedTeam();
-                    location.reload();
-                  });
-                }}
-              ></iron-icon>
-            </div>`}`;
+          `
+        : html` ${this.available_teams.length > 0
+            ? html` <div class="center-div">
+                <vaadin-combo-box
+                  class="team-selector"
+                  placeholder="Select team"
+                  .items=${this.available_teams.map((team) => {
+                    return { label: team.name, value: team.uuid };
+                  })}
+                  @selected-item-changed=${(e) => {
+                    if (e?.detail?.value?.value) {
+                      this.selected_team_uuid = e.detail.value.value;
+                      database.setSelectedTeam(this.selected_team_uuid);
+                    }
+                  }}
+                ></vaadin-combo-box>
+              </div>`
+            : html` <div class="center-div">
+                You don't belong to any team.
+                <iron-icon
+                  icon="maps:directions-walk"
+                  style="width: 1.5rem;"
+                  @click=${() => {
+                    api.logout().then(() => {
+                      database.removeSelectedTeam();
+                      location.reload();
+                    });
+                  }}
+                ></iron-icon>
+              </div>`}`}`;
   }
 
   protected firstUpdated() {

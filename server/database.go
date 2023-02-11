@@ -446,17 +446,17 @@ func buildTimestampsFromPeriod(period string) (time.Time, time.Time) {
 	case "year":
 		return now.AddDate(0, -12, 0), now
 	case "previous_month":
-		return now.AddDate(0, -1, 0), now
+		return now.AddDate(0, -2, 0), now.AddDate(0, -1, 0)
 	case "previous_week":
-		return now.AddDate(0, 0, -7), now
+		return now.AddDate(0, 0, -14), now.AddDate(0, 0, -7)
 	case "previous_day":
-		return now.AddDate(0, 0, -1), now
+		return now.AddDate(0, 0, -2), now.AddDate(0, 0, -1)
 	case "day":
-		return now, now.AddDate(0, 0, 1)
+		return now.AddDate(0, 0, -1), now
 	case "week":
-		return now, now.AddDate(0, 0, 7)
+		return now.AddDate(0, 0, -7), now
 	case "month":
-		return now, now.AddDate(0, 1, 0)
+		return now.AddDate(0, -1, 0), now
 	}
 
 	return time.Time{}, time.Time{}
